@@ -9,6 +9,8 @@ import type { ChessBoardProps } from './ChessBoard.types'
 const ChessBoard = ({
   pieces,
   orientation,
+  boardRotation,
+  labelsHidden,
   selectedSquare,
   legalMoves,
   lastMove,
@@ -27,7 +29,6 @@ const ChessBoard = ({
         aspectRatio: '1 / 1',
         borderRadius: 2,
         overflow: 'hidden',
-        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06)',
         pointerEvents: disabled ? 'none' : 'auto',
       }}
     >
@@ -55,6 +56,7 @@ const ChessBoard = ({
                 isCheck={checkSquare === square}
                 fileLabel={rowIndex === 7 ? file : undefined}
                 rankLabel={colIndex === 0 ? rank : undefined}
+                labelsHidden={labelsHidden}
                 onClick={onSquareClick}
               />
             )
@@ -68,6 +70,7 @@ const ChessBoard = ({
             <ChessPiece
               key={piece.id}
               piece={piece}
+              boardRotation={boardRotation}
               col={squareToCol(piece.square, orientation)}
               row={squareToRow(piece.square, orientation)}
               isElevated={lastMove !== null && lastMove.to === piece.square}

@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import type { Color, Square } from 'chess.js'
-import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 'motion/react'
-import type { Transition } from 'motion/react'
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from 'motion/react'
+import type { AnimationPlaybackControls } from 'motion/react'
 import useChessGame from '@/hooks/useChessGame'
 import ChessBoard from '@/components/ChessBoard'
 import GameStatusBar from '@/components/GameStatusBar'
@@ -13,16 +20,22 @@ import GameOverOverlay from '@/components/GameOverOverlay'
 import { isGameOver } from '@/utils/board'
 import type { GameScreenProps } from './GameScreen.types'
 
-/** How long piece glide gets to finish before the board starts turning. */
-const FLIP_DELAY_MS = 420
-const FLIP_HALF_TURN: Transition = { duration: 0.32, ease: [0.55, 0, 1, 0.45] }
-const FLIP_SETTLE: Transition = { duration: 0.34, ease: [0, 0.55, 0.45, 1] }
+/** Overlap window: the orbit starts gently while the moved piece finishes its glide. */
+const TURN_DELAY_MS = 200
+/** Scale the board drops to while "lifted off the table" during the turn. */
+const LIFT_SCALE = 0.94
+/** 3D tilt (degrees) applied with the lift, flattened back out on settle. */
+const LIFT_TILT_DEG = 8
+/** Must match the board's border radius (sx borderRadius: 2 → 28px) so shadows hug it. */
+const BOARD_RADIUS_PX = 28
 
 const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
   const game = useChessGame()
   const [orientation, setOrientation] = useState<Color>('w')
-  const [isFlipping, setIsFlipping] = useState(false)
-  const flipControls = useAnimationControls()
+  const [isTurning, setIsTurning] = useState(false)
+  const boardRotation = useMotionValue(0)
+  const boardScale = useMotionValue(1)
+  const boardTilt = useMotionValue(0)
   const reduceMotion = useReducedMotion()
   const prevTurnRef = useRef<Color>('w')
   const gameOver = isGameOver(game.status)
@@ -33,34 +46,54 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
     if (isGameOver(game.status)) return
 
     let cancelled = false
-    setIsFlipping(true)
+    const controls: AnimationPlaybackControls[] = []
+    setIsTurning(true)
 
-    const flip = async () => {
-      await new Promise((resolve) => setTimeout(resolve, FLIP_DELAY_MS))
+    const turnTable = async () => {
+      await new Promise((resolve) => setTimeout(resolve, TURN_DELAY_MS))
       if (cancelled) return
       if (reduceMotion) {
         setOrientation(game.turn)
-        setIsFlipping(false)
+        setIsTurning(false)
         return
       }
-      await flipControls.start({ rotateY: 90, transition: FLIP_HALF_TURN })
+      // Lift: the board comes slightly off the table as the orbit begins.
+      controls.push(
+        animate(boardScale, LIFT_SCALE, { duration: 0.18, ease: 'easeOut' }),
+        animate(boardTilt, LIFT_TILT_DEG, { duration: 0.18, ease: 'easeOut' }),
+      )
+      // Orbit: one continuous in-plane half turn, decelerating into place.
+      const orbit = animate(boardRotation, 180, { duration: 0.52, ease: [0.45, 0, 0.15, 1] })
+      controls.push(orbit)
+      await orbit
       if (cancelled) return
-      setOrientation(game.turn)
-      flipControls.set({ rotateY: -90 })
-      await flipControls.start({ rotateY: 0, transition: FLIP_SETTLE })
+      // A board rotated 180° is pixel-identical to the swapped orientation at 0°,
+      // so committing both in the same paint makes the state swap invisible.
+      // Reset the rotation FIRST: the piece layer remounts on the orientation swap,
+      // and its counter-rotations must initialize from 0, not the stale 180.
+      boardRotation.jump(0)
+      flushSync(() => setOrientation(game.turn))
+      // Settle: back down onto the table with a bit of spring.
+      const settle = [
+        animate(boardScale, 1, { type: 'spring', stiffness: 320, damping: 22 }),
+        animate(boardTilt, 0, { type: 'spring', stiffness: 320, damping: 22 }),
+      ]
+      controls.push(...settle)
+      await Promise.all(settle)
       if (cancelled) return
-      setIsFlipping(false)
+      setIsTurning(false)
     }
-    void flip()
+    void turnTable()
 
     return () => {
       cancelled = true
+      controls.forEach((control) => control.stop())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.turn])
 
   const handleSquareClick = (square: Square) => {
-    if (isFlipping) return
+    if (isTurning) return
     game.selectSquare(square)
   }
 
@@ -68,8 +101,10 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
     game.reset()
     prevTurnRef.current = 'w'
     setOrientation('w')
-    setIsFlipping(false)
-    flipControls.set({ rotateY: 0 })
+    setIsTurning(false)
+    boardRotation.jump(0)
+    boardScale.jump(1)
+    boardTilt.jump(0)
   }
 
   return (
@@ -100,17 +135,30 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
         <CapturedPieces color={orientation === 'w' ? 'b' : 'w'} captured={game.captured} />
 
         <Box sx={{ perspective: '1400px' }}>
-          <motion.div initial={false} animate={flipControls} style={{ transformStyle: 'preserve-3d' }}>
-            <ChessBoard
-              pieces={game.pieces}
-              orientation={orientation}
-              selectedSquare={game.selectedSquare}
-              legalMoves={game.selectedSquare ? game.legalMoves : []}
-              lastMove={game.lastMove}
-              checkSquare={game.checkSquare}
-              disabled={isFlipping || gameOver}
-              onSquareClick={handleSquareClick}
-            />
+          {/* Lift layer: scale + tilt + shadow. Never rotates, so the light direction stays put. */}
+          <motion.div
+            style={{
+              scale: boardScale,
+              rotateX: boardTilt,
+              borderRadius: BOARD_RADIUS_PX,
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06)',
+            }}
+          >
+            {/* Orbit layer: the in-plane table turn. */}
+            <motion.div style={{ rotate: boardRotation }}>
+              <ChessBoard
+                pieces={game.pieces}
+                orientation={orientation}
+                boardRotation={boardRotation}
+                labelsHidden={isTurning}
+                selectedSquare={game.selectedSquare}
+                legalMoves={game.selectedSquare ? game.legalMoves : []}
+                lastMove={game.lastMove}
+                checkSquare={game.checkSquare}
+                disabled={isTurning || gameOver}
+                onSquareClick={handleSquareClick}
+              />
+            </motion.div>
           </motion.div>
         </Box>
 

@@ -10,5 +10,7 @@ export interface BoardSquareProps {
   isCheck: boolean
   fileLabel?: string
   rankLabel?: string
+  /** Fades coordinate labels out during the turn transition. */
+  labelsHidden: boolean
   onClick: (square: Square) => void
 }

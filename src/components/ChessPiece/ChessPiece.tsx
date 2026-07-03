@@ -1,9 +1,12 @@
-import { motion } from 'motion/react'
+import { motion, useTransform } from 'motion/react'
 import { PIECE_IMAGES, PIECE_NAMES } from '@/utils/pieces'
 import { colorName } from '@/utils/board'
 import type { ChessPieceProps } from './ChessPiece.types'
 
-const ChessPiece = ({ piece, col, row, isElevated }: ChessPieceProps) => {
+const ChessPiece = ({ piece, boardRotation, col, row, isElevated }: ChessPieceProps) => {
+  // Cancels the board's turn so the glyph stays upright while riding the rotation.
+  const counterRotation = useTransform(boardRotation, (deg) => -deg)
+
   return (
     <motion.div
       initial={false}
@@ -22,12 +25,13 @@ const ChessPiece = ({ piece, col, row, isElevated }: ChessPieceProps) => {
         justifyContent: 'center',
       }}
     >
-      <img
+      <motion.img
         src={PIECE_IMAGES[piece.color][piece.type]}
         alt={`${colorName(piece.color)} ${PIECE_NAMES[piece.type]}`}
         style={{
           width: '88%',
           height: '88%',
+          rotate: counterRotation,
           filter: 'drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35))',
         }}
       />

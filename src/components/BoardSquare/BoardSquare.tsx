@@ -18,6 +18,7 @@ const BoardSquare = ({
   isCheck,
   fileLabel,
   rankLabel,
+  labelsHidden,
   onClick,
 }: BoardSquareProps) => {
   const labelColor = isDark ? BOARD_COLORS.lightSquare : BOARD_COLORS.darkSquare
@@ -85,6 +86,8 @@ const BoardSquare = ({
             fontWeight: 700,
             color: labelColor,
             lineHeight: 1,
+            opacity: labelsHidden ? 0 : 1,
+            transition: 'opacity 120ms ease',
           }}
         >
           {rankLabel}
@@ -100,6 +103,8 @@ const BoardSquare = ({
             fontWeight: 700,
             color: labelColor,
             lineHeight: 1,
+            opacity: labelsHidden ? 0 : 1,
+            transition: 'opacity 120ms ease',
           }}
         >
           {fileLabel}
