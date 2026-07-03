@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { colorName } from '@/utils/board'
 import type { GameStatusBarProps } from './GameStatusBar.types'
 
-const GameStatusBar = ({ turn, status, moveNumber }: GameStatusBarProps) => {
+const GameStatusBar = ({ turn, status, moveNumber, engineActivity }: GameStatusBarProps) => {
   return (
     <Box
       sx={{
@@ -49,6 +49,30 @@ const GameStatusBar = ({ turn, status, moveNumber }: GameStatusBarProps) => {
         </AnimatePresence>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <AnimatePresence>
+          {engineActivity && (
+            <motion.div
+              key={engineActivity}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: [1, 0.55, 1], scale: 1 }}
+              // Exit must override the infinite pulse, or AnimatePresence
+              // never finishes removing the chip.
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.18 } }}
+              transition={{
+                opacity: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+                scale: { duration: 0.2 },
+              }}
+            >
+              <Chip
+                label={engineActivity === 'loading' ? 'Engine warming up…' : 'Thinking…'}
+                color="secondary"
+                variant="outlined"
+                size="small"
+                sx={{ fontWeight: 700 }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence>
           {status === 'check' && (
             <motion.div

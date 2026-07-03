@@ -3,10 +3,19 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { motion, useReducedMotion } from 'motion/react'
 import { PIECE_IMAGES } from '@/utils/pieces'
+import type { Difficulty } from '@/types/chess.types'
 import type { FloatingPieceConfig, MainMenuProps } from './MainMenu.types'
+
+const DIFFICULTIES: { value: Difficulty; label: string }[] = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'hard', label: 'Hard' },
+]
 
 const FLOATING_PIECES: FloatingPieceConfig[] = [
   { image: PIECE_IMAGES.w.n, size: 110, top: '12%', left: '8%', duration: 7, delay: 0, opacity: 0.1 },
@@ -17,9 +26,10 @@ const FLOATING_PIECES: FloatingPieceConfig[] = [
   { image: PIECE_IMAGES.b.p, size: 70, top: '48%', left: '4%', duration: 6.5, delay: 2, opacity: 0.08 },
 ]
 
-const MainMenu = ({ onPlayLocal, onScout }: MainMenuProps) => {
+const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
   const reduceMotion = useReducedMotion()
   const [username, setUsername] = useState('')
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
   const trimmedUsername = username.trim()
 
   const submitScout = () => {
@@ -138,7 +148,48 @@ const MainMenu = ({ onPlayLocal, onScout }: MainMenuProps) => {
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.5 }}
+        transition={{ delay: 0.65, duration: 0.5 }}
+        style={{ marginTop: 20 }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          useFlexGap
+          sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}
+        >
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => onPlayComputer(difficulty)}
+            startIcon={
+              <img src={PIECE_IMAGES.w.n} alt="" aria-hidden style={{ width: 26, height: 26 }} />
+            }
+            sx={{ px: 4, py: 1.25, flexShrink: 0 }}
+          >
+            vs Computer
+          </Button>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={difficulty}
+            onChange={(_event, value: Difficulty | null) => {
+              if (value) setDifficulty(value)
+            }}
+            aria-label="computer difficulty"
+          >
+            {DIFFICULTIES.map(({ value, label }) => (
+              <ToggleButton key={value} value={value} sx={{ px: 1.75, fontWeight: 700 }}>
+                {label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Stack>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 0.5 }}
         style={{ marginTop: 28, width: '100%', maxWidth: 380 }}
       >
         <Stack direction="row" spacing={1.5}>
@@ -171,7 +222,7 @@ const MainMenu = ({ onPlayLocal, onScout }: MainMenuProps) => {
         transition={{ delay: 0.9, duration: 0.6 }}
       >
         <Typography variant="caption" sx={{ mt: 3, display: 'block', color: 'text.secondary' }}>
-          Pass &amp; play on one device — or scout a chess.com profile for the roast of a lifetime
+          Pass &amp; play on one device, battle the computer — or scout a chess.com profile for the roast of a lifetime
         </Typography>
       </motion.div>
     </Box>

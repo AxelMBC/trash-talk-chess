@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'motion/react'
 import MainMenu from '@/components/MainMenu'
 import GameScreen from '@/components/GameScreen'
 import ScoutingReport from '@/components/ScoutingReport'
-import type { ScreenName } from '@/types/chess.types'
+import type { GameConfig, ScreenName } from '@/types/chess.types'
 
 const App = () => {
   const [screen, setScreen] = useState<ScreenName>('menu')
   const [scoutUsername, setScoutUsername] = useState('')
+  const [gameConfig, setGameConfig] = useState<GameConfig>({ mode: 'local' })
 
   return (
     <AnimatePresence mode="wait">
@@ -20,7 +21,16 @@ const App = () => {
           transition={{ duration: 0.3 }}
         >
           <MainMenu
-            onPlayLocal={() => setScreen('game')}
+            onPlayLocal={() => {
+              setGameConfig({ mode: 'local' })
+              setScreen('game')
+            }}
+            onPlayComputer={(difficulty) => {
+              // v1: the human always plays White; the config field keeps a
+              // future color picker a menu-only change.
+              setGameConfig({ mode: 'computer', difficulty, playerColor: 'w' })
+              setScreen('game')
+            }}
             onScout={(username) => {
               setScoutUsername(username)
               setScreen('scouting')
@@ -45,7 +55,7 @@ const App = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <GameScreen onExitToMenu={() => setScreen('menu')} />
+          <GameScreen config={gameConfig} onExitToMenu={() => setScreen('menu')} />
         </motion.div>
       )}
     </AnimatePresence>

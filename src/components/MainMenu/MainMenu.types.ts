@@ -1,5 +1,8 @@
+import type { Difficulty } from '@/types/chess.types'
+
 export interface MainMenuProps {
   onPlayLocal: () => void
+  onPlayComputer: (difficulty: Difficulty) => void
   onScout: (username: string) => void
 }
 

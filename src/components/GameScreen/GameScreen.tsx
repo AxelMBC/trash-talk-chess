@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
 import type { Color, Square } from 'chess.js'
 import {
   AnimatePresence,
@@ -12,6 +13,7 @@ import {
 } from 'motion/react'
 import type { AnimationPlaybackControls } from 'motion/react'
 import useChessGame from '@/hooks/useChessGame'
+import useEngineOpponent from '@/hooks/useEngineOpponent'
 import ChessBoard from '@/components/ChessBoard'
 import GameStatusBar from '@/components/GameStatusBar'
 import CapturedPieces from '@/components/CapturedPieces'
@@ -29,9 +31,16 @@ const LIFT_TILT_DEG = 8
 /** Must match the board's border radius (sx borderRadius: 2 → 28px) so shadows hug it. */
 const BOARD_RADIUS_PX = 28
 
-const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
+const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
   const game = useChessGame()
-  const [orientation, setOrientation] = useState<Color>('w')
+  const isComputer = config.mode === 'computer'
+  const playerColor: Color = isComputer ? config.playerColor : 'w'
+  const engine = useEngineOpponent(game, {
+    enabled: isComputer,
+    difficulty: isComputer ? config.difficulty : 'medium',
+    engineColor: playerColor === 'w' ? 'b' : 'w',
+  })
+  const [orientation, setOrientation] = useState<Color>(playerColor)
   const [isTurning, setIsTurning] = useState(false)
   const boardRotation = useMotionValue(0)
   const boardScale = useMotionValue(1)
@@ -39,8 +48,14 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
   const reduceMotion = useReducedMotion()
   const prevTurnRef = useRef<Color>('w')
   const gameOver = isGameOver(game.status)
+  /** vs computer: the human can only act on their own turn with a live engine. */
+  const engineBlocksInput =
+    isComputer && (game.turn !== playerColor || engine.engineStatus !== 'idle')
 
   useEffect(() => {
+    // The table-turn is a pass-and-play ritual; vs the computer the board
+    // stays fixed toward the human player for the whole game.
+    if (isComputer) return
     if (game.turn === prevTurnRef.current) return
     prevTurnRef.current = game.turn
     if (isGameOver(game.status)) return
@@ -93,14 +108,15 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
   }, [game.turn])
 
   const handleSquareClick = (square: Square) => {
-    if (isTurning) return
+    if (isTurning || engineBlocksInput) return
     game.selectSquare(square)
   }
 
   const handleRematch = () => {
     game.reset()
+    engine.startNewGame()
     prevTurnRef.current = 'w'
-    setOrientation('w')
+    setOrientation(playerColor)
     setIsTurning(false)
     boardRotation.jump(0)
     boardScale.jump(1)
@@ -130,7 +146,16 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
           gap: 1.25,
         }}
       >
-        <GameStatusBar turn={game.turn} status={game.status} moveNumber={game.moveNumber} />
+        <GameStatusBar
+          turn={game.turn}
+          status={game.status}
+          moveNumber={game.moveNumber}
+          engineActivity={
+            !gameOver && (engine.engineStatus === 'loading' || engine.engineStatus === 'thinking')
+              ? engine.engineStatus
+              : null
+          }
+        />
 
         <CapturedPieces color={orientation === 'w' ? 'b' : 'w'} captured={game.captured} />
 
@@ -155,7 +180,7 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
                 legalMoves={game.selectedSquare ? game.legalMoves : []}
                 lastMove={game.lastMove}
                 checkSquare={game.checkSquare}
-                disabled={isTurning || gameOver}
+                disabled={isTurning || gameOver || engineBlocksInput}
                 onSquareClick={handleSquareClick}
               />
             </motion.div>
@@ -192,6 +217,51 @@ const GameScreen = ({ onExitToMenu }: GameScreenProps) => {
             onRematch={handleRematch}
             onMenu={onExitToMenu}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Engine trouble is terminal for the game: surface it, offer the exit. */}
+      <AnimatePresence>
+        {engine.engineStatus === 'error' && !gameOver && (
+          <motion.div
+            key="engine-error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(11, 14, 20, 0.82)',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            <Box
+              sx={{
+                maxWidth: 420,
+                mx: 2,
+                px: 4,
+                py: 3.5,
+                textAlign: 'center',
+                borderRadius: 3,
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
+                The engine flipped the table
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', mb: 3 }}>
+                {engine.engineError?.message ?? 'The chess engine ran into a problem.'}
+              </Typography>
+              <Button variant="contained" onClick={onExitToMenu}>
+                ← Back to menu
+              </Button>
+            </Box>
+          </motion.div>
         )}
       </AnimatePresence>
     </Box>

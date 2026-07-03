@@ -30,6 +30,8 @@ export interface ChessGame extends ChessGameState {
   makeMove: (from: Square, to: Square, promotion?: PromotionPiece) => void
   cancelPromotion: () => void
   reset: () => void
+  /** Current position as FEN, for feeding external engines. */
+  getFen: () => string
 }
 
 const buildPieces = (chess: Chess): TrackedPiece[] =>
@@ -173,7 +175,9 @@ const useChessGame = (): ChessGame => {
     setState(createInitialState(chessRef.current))
   }
 
-  return { ...state, selectSquare, makeMove, cancelPromotion, reset }
+  const getFen = () => chessRef.current!.fen()
+
+  return { ...state, selectSquare, makeMove, cancelPromotion, reset, getFen }
 }
 
 export default useChessGame
