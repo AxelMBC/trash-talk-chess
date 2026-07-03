@@ -3,6 +3,13 @@ import type { Color, PieceSymbol, Square } from 'chess.js'
 export type PlayerColor = Color
 export type ScreenName = 'menu' | 'game' | 'scouting'
 
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
+/** How a game screen should run: pass-and-play or against the engine. */
+export type GameConfig =
+  | { mode: 'local' }
+  | { mode: 'computer'; difficulty: Difficulty; playerColor: Color }
+
 export type GameStatus = 'playing' | 'check' | 'checkmate' | 'stalemate' | 'draw'
 
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
