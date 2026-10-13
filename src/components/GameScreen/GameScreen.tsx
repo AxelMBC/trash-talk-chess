@@ -1,19 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Typography from '@mui/material/Typography'
 import type { Color, Square } from 'chess.js'
-import {
-  AnimatePresence,
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-} from 'motion/react'
-import type { AnimationPlaybackControls } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import useChessGame from '@/hooks/useChessGame'
 import useEngineOpponent from '@/hooks/useEngineOpponent'
+import useTableTurn from '@/hooks/useTableTurn'
 import useTrashTalk from '@/hooks/useTrashTalk'
 import ChessBoard from '@/components/ChessBoard'
 import TrashTalkBubble from '@/components/TrashTalkBubble'
@@ -21,15 +12,10 @@ import GameStatusBar from '@/components/GameStatusBar'
 import CapturedPieces from '@/components/CapturedPieces'
 import PromotionDialog from '@/components/PromotionDialog'
 import GameOverOverlay from '@/components/GameOverOverlay'
+import EngineErrorOverlay from '@/components/EngineErrorOverlay'
 import { isGameOver } from '@/utils/board'
 import type { GameScreenProps } from './GameScreen.types'
 
-/** Overlap window: the orbit starts gently while the moved piece finishes its glide. */
-const TURN_DELAY_MS = 200
-/** Scale the board drops to while "lifted off the table" during the turn. */
-const LIFT_SCALE = 0.94
-/** 3D tilt (degrees) applied with the lift, flattened back out on settle. */
-const LIFT_TILT_DEG = 8
 /** Must match the board's border radius (sx borderRadius: 2 → 28px) so shadows hug it. */
 const BOARD_RADIUS_PX = 28
 
@@ -49,76 +35,14 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
     engineStatus: engine.engineStatus,
     lastReport: engine.lastReport,
   })
-  const [orientation, setOrientation] = useState<Color>(playerColor)
-  const [isTurning, setIsTurning] = useState(false)
-  const boardRotation = useMotionValue(0)
-  const boardScale = useMotionValue(1)
-  const boardTilt = useMotionValue(0)
-  const reduceMotion = useReducedMotion()
-  const prevTurnRef = useRef<Color>('w')
-  /** Rematch can leave `game.turn` unchanged, so it stops the turn in flight itself. */
-  const cancelTurnRef = useRef<() => void>(() => {})
+  // The table-turn is a pass-and-play ritual; vs the computer the board
+  // stays fixed toward the human player for the whole game.
+  const { orientation, isTurning, boardRotation, boardScale, boardTilt, reset: resetTable } =
+    useTableTurn(game.turn, game.status, { enabled: !isComputer, homeOrientation: playerColor })
   const gameOver = isGameOver(game.status)
   /** vs computer: the human can only act on their own turn with a live engine. */
   const engineBlocksInput =
     isComputer && (game.turn !== playerColor || engine.engineStatus !== 'idle')
-
-  useEffect(() => {
-    // The table-turn is a pass-and-play ritual; vs the computer the board
-    // stays fixed toward the human player for the whole game.
-    if (isComputer) return
-    if (game.turn === prevTurnRef.current) return
-    prevTurnRef.current = game.turn
-    if (isGameOver(game.status)) return
-
-    let cancelled = false
-    const controls: AnimationPlaybackControls[] = []
-    setIsTurning(true)
-
-    const turnTable = async () => {
-      await new Promise((resolve) => setTimeout(resolve, TURN_DELAY_MS))
-      if (cancelled) return
-      if (reduceMotion) {
-        setOrientation(game.turn)
-        setIsTurning(false)
-        return
-      }
-      // Lift: the board comes slightly off the table as the orbit begins.
-      controls.push(
-        animate(boardScale, LIFT_SCALE, { duration: 0.18, ease: 'easeOut' }),
-        animate(boardTilt, LIFT_TILT_DEG, { duration: 0.18, ease: 'easeOut' }),
-      )
-      // Orbit: one continuous in-plane half turn, decelerating into place.
-      const orbit = animate(boardRotation, 180, { duration: 0.52, ease: [0.45, 0, 0.15, 1] })
-      controls.push(orbit)
-      await orbit
-      if (cancelled) return
-      // A board rotated 180° is pixel-identical to the swapped orientation at 0°,
-      // so committing both in the same paint makes the state swap invisible.
-      // Reset the rotation FIRST: the piece layer remounts on the orientation swap,
-      // and its counter-rotations must initialize from 0, not the stale 180.
-      boardRotation.jump(0)
-      flushSync(() => setOrientation(game.turn))
-      // Settle: back down onto the table with a bit of spring.
-      const settle = [
-        animate(boardScale, 1, { type: 'spring', stiffness: 320, damping: 22 }),
-        animate(boardTilt, 0, { type: 'spring', stiffness: 320, damping: 22 }),
-      ]
-      controls.push(...settle)
-      await Promise.all(settle)
-      if (cancelled) return
-      setIsTurning(false)
-    }
-    void turnTable()
-
-    const cancelTurn = () => {
-      cancelled = true
-      controls.forEach((control) => control.stop())
-    }
-    cancelTurnRef.current = cancelTurn
-    return cancelTurn
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.turn])
 
   const handleSquareClick = (square: Square) => {
     if (isTurning || engineBlocksInput) return
@@ -126,15 +50,9 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
   }
 
   const handleRematch = () => {
-    cancelTurnRef.current()
+    resetTable()
     game.reset()
     engine.startNewGame()
-    prevTurnRef.current = 'w'
-    setOrientation(playerColor)
-    setIsTurning(false)
-    boardRotation.jump(0)
-    boardScale.jump(1)
-    boardTilt.jump(0)
   }
 
   return (
@@ -242,45 +160,11 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
       {/* Engine trouble is terminal for the game: surface it, offer the exit. */}
       <AnimatePresence>
         {engine.engineStatus === 'error' && !gameOver && (
-          <motion.div
+          <EngineErrorOverlay
             key="engine-error"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(11, 14, 20, 0.82)',
-              backdropFilter: 'blur(6px)',
-            }}
-          >
-            <Box
-              sx={{
-                maxWidth: 420,
-                mx: 2,
-                px: 4,
-                py: 3.5,
-                textAlign: 'center',
-                borderRadius: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                The engine flipped the table
-              </Typography>
-              <Typography sx={{ color: 'text.secondary', mb: 3 }}>
-                {engine.engineError?.message ?? 'The chess engine ran into a problem.'}
-              </Typography>
-              <Button variant="contained" onClick={onExitToMenu}>
-                ← Back to menu
-              </Button>
-            </Box>
-          </motion.div>
+            message={engine.engineError?.message}
+            onMenu={onExitToMenu}
+          />
         )}
       </AnimatePresence>
     </Box>
