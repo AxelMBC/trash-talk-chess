@@ -58,7 +58,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
     >
       {FLOATING_PIECES.map((piece, index) => (
         <motion.img
-          key={index}
+          key={piece.image}
           src={piece.image}
           alt=""
           aria-hidden

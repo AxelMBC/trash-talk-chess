@@ -83,3 +83,9 @@ export interface PickedLine {
   id: string
   text: string
 }
+
+/** The line on screen: `id` is unique per showing, so the bubble re-animates even when a line repeats. */
+export interface TrashTalkLine {
+  id: string
+  text: string
+}

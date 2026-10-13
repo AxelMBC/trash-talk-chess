@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import { keyframes } from '@emotion/react'
 import { BOARD_COLORS } from '@/theme/theme'
 import type { BoardSquareProps } from './BoardSquare.types'
@@ -19,29 +20,41 @@ const BoardSquare = ({
   fileLabel,
   rankLabel,
   labelsHidden,
+  label,
   onClick,
 }: BoardSquareProps) => {
   const labelColor = isDark ? BOARD_COLORS.lightSquare : BOARD_COLORS.darkSquare
 
   return (
-    <Box
+    <ButtonBase
       data-square={square}
+      aria-label={label}
+      aria-pressed={isSelected}
+      disableRipple
       onClick={() => onClick(square)}
       sx={{
         position: 'relative',
+        display: 'block',
         backgroundColor: isDark ? BOARD_COLORS.darkSquare : BOARD_COLORS.lightSquare,
-        cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
+        '&.Mui-focusVisible': { outline: `3px solid ${BOARD_COLORS.selected}`, outlineOffset: -3 },
       }}
     >
       {isLastMove && (
-        <Box sx={{ position: 'absolute', inset: 0, backgroundColor: BOARD_COLORS.lastMove }} />
+        <Box
+          component="span"
+          sx={{ position: 'absolute', inset: 0, backgroundColor: BOARD_COLORS.lastMove }}
+        />
       )}
       {isSelected && (
-        <Box sx={{ position: 'absolute', inset: 0, backgroundColor: BOARD_COLORS.selected }} />
+        <Box
+          component="span"
+          sx={{ position: 'absolute', inset: 0, backgroundColor: BOARD_COLORS.selected }}
+        />
       )}
       {isCheck && (
         <Box
+          component="span"
           sx={{
             position: 'absolute',
             inset: 0,
@@ -52,6 +65,7 @@ const BoardSquare = ({
       )}
       {isLegalTarget && !isCaptureTarget && (
         <Box
+          component="span"
           sx={{
             position: 'absolute',
             top: '50%',
@@ -66,6 +80,7 @@ const BoardSquare = ({
       )}
       {isCaptureTarget && (
         <Box
+          component="span"
           sx={{
             position: 'absolute',
             inset: '4%',
@@ -78,6 +93,7 @@ const BoardSquare = ({
       )}
       {rankLabel && (
         <Box
+          component="span"
           sx={{
             position: 'absolute',
             top: '3%',
@@ -95,6 +111,7 @@ const BoardSquare = ({
       )}
       {fileLabel && (
         <Box
+          component="span"
           sx={{
             position: 'absolute',
             bottom: '3%',
@@ -110,7 +127,7 @@ const BoardSquare = ({
           {fileLabel}
         </Box>
       )}
-    </Box>
+    </ButtonBase>
   )
 }
 

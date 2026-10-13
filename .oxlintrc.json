@@ -4,6 +4,7 @@
   "ignorePatterns": ["public/engine/**"],
   "rules": {
     "react/rules-of-hooks": "error",
+    "react/no-array-index-key": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
   }
 }

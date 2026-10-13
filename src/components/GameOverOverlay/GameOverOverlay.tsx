@@ -97,6 +97,8 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
         <Box component="span" sx={{ display: 'flex', overflow: 'hidden', py: 0.5 }}>
           {title.split('').map((letter, index) => (
             <motion.span
+              // Letters repeat and the title never reorders, so position is the identity.
+              // oxlint-disable-next-line react/no-array-index-key
               key={index}
               initial={{ opacity: 0, y: 46, rotate: 8 }}
               animate={{ opacity: 1, y: 0, rotate: 0 }}

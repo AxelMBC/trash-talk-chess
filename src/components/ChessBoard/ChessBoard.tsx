@@ -3,7 +3,15 @@ import { AnimatePresence } from 'motion/react'
 import type { Square } from 'chess.js'
 import BoardSquare from '@/components/BoardSquare'
 import ChessPiece from '@/components/ChessPiece'
-import { isDarkSquare, orientedFiles, orientedRanks, squareToCol, squareToRow } from '@/utils/board'
+import {
+  colorName,
+  isDarkSquare,
+  orientedFiles,
+  orientedRanks,
+  squareToCol,
+  squareToRow,
+} from '@/utils/board'
+import { PIECE_NAMES } from '@/utils/pieces'
 import type { ChessBoardProps } from './ChessBoard.types'
 
 const ChessBoard = ({
@@ -20,6 +28,12 @@ const ChessBoard = ({
 }: ChessBoardProps) => {
   const files = orientedFiles(orientation)
   const ranks = orientedRanks(orientation)
+  const pieceBySquare = new Map(pieces.map((piece) => [piece.square, piece]))
+
+  const squareLabel = (square: Square): string => {
+    const piece = pieceBySquare.get(square)
+    return piece ? `${square}, ${colorName(piece.color)} ${PIECE_NAMES[piece.type]}` : square
+  }
 
   return (
     <Box
@@ -57,6 +71,7 @@ const ChessBoard = ({
                 fileLabel={rowIndex === 7 ? file : undefined}
                 rankLabel={colIndex === 0 ? rank : undefined}
                 labelsHidden={labelsHidden}
+                label={squareLabel(square)}
                 onClick={onSquareClick}
               />
             )

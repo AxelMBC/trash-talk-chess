@@ -8,6 +8,7 @@ import { getPlayerProfile } from '@/services/playerBrief'
 import type {
   PlayerProfile,
   TrashTalkCategory,
+  TrashTalkLine,
   TrashTalkMoment,
 } from '@/types/trashTalk.types'
 import { advantageFromCp, classifyPlayerMove, CRUSHING_CP, scoreToCp } from '@/utils/moveQuality'
@@ -21,11 +22,6 @@ import { isGameOver } from '@/utils/board'
 const LINE_TTL_MS = 10_000
 /** Player think time on one turn before the engine starts nagging. */
 const SLOW_PLAY_THRESHOLD_MS = 30_000
-
-export interface TrashTalkLine {
-  id: string
-  text: string
-}
 
 export interface TrashTalkConfig {
   /** When false the hook is inert (pass-and-play games). */
