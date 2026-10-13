@@ -73,6 +73,10 @@ Starting a new game (rematch) SHALL cancel any in-progress transition and reset 
 - **WHEN** the player starts a rematch
 - **THEN** the board shows white's orientation at rest and input is enabled
 
+#### Scenario: Rematch while a turn is still pending
+- **WHEN** the player starts a rematch while a turn-change transition is still pending or running, whichever side moved last
+- **THEN** the transition stops at once, the board stays at rest in white's orientation, and no lift or rotation plays afterwards
+
 ### Requirement: Fixed orientation in vs-computer games
 In a vs-computer game, the board SHALL remain oriented toward the human player's color for the entire game, including at game start, after every move by either side, after rematch, and regardless of reduced-motion settings.
 

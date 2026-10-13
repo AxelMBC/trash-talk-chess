@@ -11,7 +11,7 @@ import type { GameOverOverlayProps } from './GameOverOverlay.types'
 const WHITE_CONFETTI = ['#f4f6fa', '#f5b942', '#ffe8b3', '#c9d4e8']
 const BLACK_CONFETTI = ['#4dd6c1', '#f5b942', '#8ab4ff', '#39404f']
 
-const fireCelebration = (colors: string[]) => {
+const fireCelebration = (colors: string[]): (() => void) => {
   const burst = (particleRatio: number, options: confetti.Options) => {
     confetti({
       particleCount: Math.floor(240 * particleRatio),
@@ -27,12 +27,18 @@ const fireCelebration = (colors: string[]) => {
   burst(0.15, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
 
   const end = Date.now() + 1800
+  let frame = 0
   const sideCannons = () => {
     confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors })
     confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors })
-    if (Date.now() < end) requestAnimationFrame(sideCannons)
+    if (Date.now() < end) frame = requestAnimationFrame(sideCannons)
   }
   sideCannons()
+
+  return () => {
+    cancelAnimationFrame(frame)
+    confetti.reset()
+  }
 }
 
 const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayProps) => {
@@ -43,11 +49,14 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
 
   useEffect(() => {
     if (!isCheckmate || reduceMotion) return
-    const timer = setTimeout(
-      () => fireCelebration(winner === 'w' ? WHITE_CONFETTI : BLACK_CONFETTI),
-      350,
-    )
-    return () => clearTimeout(timer)
+    let stopCelebration: (() => void) | undefined
+    const timer = setTimeout(() => {
+      stopCelebration = fireCelebration(winner === 'w' ? WHITE_CONFETTI : BLACK_CONFETTI)
+    }, 350)
+    return () => {
+      clearTimeout(timer)
+      stopCelebration?.()
+    }
   }, [isCheckmate, winner, reduceMotion])
 
   return (

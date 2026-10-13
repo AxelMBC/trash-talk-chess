@@ -56,6 +56,8 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
   const boardTilt = useMotionValue(0)
   const reduceMotion = useReducedMotion()
   const prevTurnRef = useRef<Color>('w')
+  /** Rematch can leave `game.turn` unchanged, so it stops the turn in flight itself. */
+  const cancelTurnRef = useRef<() => void>(() => {})
   const gameOver = isGameOver(game.status)
   /** vs computer: the human can only act on their own turn with a live engine. */
   const engineBlocksInput =
@@ -109,10 +111,12 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
     }
     void turnTable()
 
-    return () => {
+    const cancelTurn = () => {
       cancelled = true
       controls.forEach((control) => control.stop())
     }
+    cancelTurnRef.current = cancelTurn
+    return cancelTurn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.turn])
 
@@ -122,6 +126,7 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
   }
 
   const handleRematch = () => {
+    cancelTurnRef.current()
     game.reset()
     engine.startNewGame()
     prevTurnRef.current = 'w'
