@@ -35,6 +35,24 @@ export interface EngineMove {
   promotion?: PromotionPiece
 }
 
+/** UCI score from the side-to-move's perspective (the engine's, at search time). */
+export interface EngineScore {
+  type: 'cp' | 'mate'
+  value: number
+}
+
+/** Deepest assessment seen during a search; feeds move-quality trash talk. */
+export interface SearchReport {
+  score: EngineScore
+  depth: number
+}
+
+export interface SearchOutcome {
+  move: EngineMove
+  /** Null when the search produced no parseable score lines. */
+  report: SearchReport | null
+}
+
 export type EngineErrorKind = 'load' | 'search' | 'stale'
 
 export interface EngineError {
@@ -49,12 +67,24 @@ export interface EngineHandle {
   /** Resets the engine for a fresh game; in-flight searches become stale. */
   newGame: (preset: EnginePreset) => void
   /** Resolves with the best move for `fen`, or an error (kind 'stale' if superseded). */
-  bestMove: (fen: string, preset: EnginePreset) => Promise<EngineResult<EngineMove>>
+  bestMove: (fen: string, preset: EnginePreset) => Promise<EngineResult<SearchOutcome>>
   /** Terminates the worker. The handle is unusable afterwards. */
   dispose: () => void
 }
 
 const BESTMOVE_RE = /^bestmove ([a-h][1-8])([a-h][1-8])([qrbn])?/
+const INFO_SCORE_RE = /^info\b.*\bdepth (\d+)\b.*\bscore (cp|mate) (-?\d+)/
+
+/** Bound scores are partial results; only exact scores feed the report. */
+const parseInfoScore = (line: string): SearchReport | null => {
+  if (line.includes('lowerbound') || line.includes('upperbound')) return null
+  const match = INFO_SCORE_RE.exec(line)
+  if (!match) return null
+  return {
+    depth: Number(match[1]),
+    score: { type: match[2] as 'cp' | 'mate', value: Number(match[3]) },
+  }
+}
 
 const parseBestMove = (line: string): EngineMove | null => {
   const match = BESTMOVE_RE.exec(line)
@@ -118,9 +148,10 @@ export const createEngine = async (): Promise<EngineResult<EngineHandle>> => {
     worker.postMessage(`setoption name Skill Level value ${preset.skillLevel}`)
   }
 
-  const bestMove = (fen: string, preset: EnginePreset): Promise<EngineResult<EngineMove>> => {
+  const bestMove = (fen: string, preset: EnginePreset): Promise<EngineResult<SearchOutcome>> => {
     const searchGeneration = generation
     return new Promise((resolve) => {
+      let report: SearchReport | null = null
       const timer = setTimeout(
         () =>
           finish({
@@ -130,20 +161,24 @@ export const createEngine = async (): Promise<EngineResult<EngineHandle>> => {
         preset.moveTimeMs + SEARCH_TIMEOUT_GRACE_MS,
       )
       const onMessage = (event: MessageEvent) => {
-        const move = parseBestMove(String(event.data))
+        const line = String(event.data)
+        const info = parseInfoScore(line)
+        // Same-depth lines refine earlier ones, so >= keeps the freshest.
+        if (info && info.depth >= (report?.depth ?? 0)) report = info
+        const move = parseBestMove(line)
         if (!move) return
         if (searchGeneration !== generation) {
           finish({ ok: false, error: { kind: 'stale', message: 'Search superseded by a new game.' } })
           return
         }
-        finish({ ok: true, value: move })
+        finish({ ok: true, value: { move, report } })
       }
       const onError = () =>
         finish({
           ok: false,
           error: { kind: 'search', message: 'The chess engine crashed while thinking.' },
         })
-      const finish = (result: EngineResult<EngineMove>) => {
+      const finish = (result: EngineResult<SearchOutcome>) => {
         clearTimeout(timer)
         worker.removeEventListener('message', onMessage)
         worker.removeEventListener('error', onError)

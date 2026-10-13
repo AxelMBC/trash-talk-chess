@@ -32,6 +32,10 @@ export interface ChessGame extends ChessGameState {
   reset: () => void
   /** Current position as FEN, for feeding external engines. */
   getFen: () => string
+  /** Full detail of the most recent move (flags, SAN, before/after FENs). */
+  getLastMove: () => Move | null
+  /** Moves so far as PGN movetext, for commentary/analysis consumers. */
+  getPgn: () => string
 }
 
 const buildPieces = (chess: Chess): TrackedPiece[] =>
@@ -177,7 +181,11 @@ const useChessGame = (): ChessGame => {
 
   const getFen = () => chessRef.current!.fen()
 
-  return { ...state, selectSquare, makeMove, cancelPromotion, reset, getFen }
+  const getLastMove = () => chessRef.current!.history({ verbose: true }).at(-1) ?? null
+
+  const getPgn = () => chessRef.current!.pgn()
+
+  return { ...state, selectSquare, makeMove, cancelPromotion, reset, getFen, getLastMove, getPgn }
 }
 
 export default useChessGame

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { collectRecentGames, fetchProfile, fetchStats } from '@/services/chesscom'
 import type { CollectProgress, ScoutError } from '@/services/chesscom'
 import { buildDossier, loadCachedDossier, saveDossier } from '@/services/dossier'
+import { rememberScoutedPlayer } from '@/services/playerBrief'
 import type { PlayerDossier } from '@/types/dossier.types'
 
 export type ScoutingState =
@@ -31,6 +32,7 @@ const useScoutingReport = (): ScoutingReport => {
     if (!bypassCache) {
       const cached = loadCachedDossier(username)
       if (cached) {
+        rememberScoutedPlayer(cached.username)
         setState({ phase: 'ready', dossier: cached, fromCache: true })
         return
       }
@@ -62,6 +64,7 @@ const useScoutingReport = (): ScoutingReport => {
 
       const dossier = buildDossier(username, profile.value, stats.value, games.value)
       saveDossier(dossier)
+      rememberScoutedPlayer(dossier.username)
       setState({ phase: 'ready', dossier, fromCache: false })
     } finally {
       busyRef.current = false

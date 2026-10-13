@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Color } from 'chess.js'
 import type { ChessGame } from '@/hooks/useChessGame'
 import { createEngine, ENGINE_PRESETS } from '@/services/engine'
-import type { EngineError, EngineHandle } from '@/services/engine'
+import type { EngineError, EngineHandle, SearchReport } from '@/services/engine'
 import type { Difficulty } from '@/types/chess.types'
 import { isGameOver } from '@/utils/board'
 
@@ -21,6 +21,8 @@ export interface EngineOpponentConfig {
 export interface EngineOpponent {
   engineStatus: EngineStatus
   engineError: EngineError | null
+  /** Deepest score seen in the engine's latest completed search (for trash talk). */
+  lastReport: SearchReport | null
   /** Call on rematch: discards in-flight searches and resets the engine. */
   startNewGame: () => void
 }
@@ -38,6 +40,7 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
 
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(enabled ? 'loading' : 'off')
   const [engineError, setEngineError] = useState<EngineError | null>(null)
+  const [lastReport, setLastReport] = useState<SearchReport | null>(null)
   const [ready, setReady] = useState(false)
   const handleRef = useRef<EngineHandle | null>(null)
   // Bumped on rematch/unmount; async continuations from an older generation
@@ -106,7 +109,10 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
         return
       }
 
-      game.makeMove(result.value.from, result.value.to, result.value.promotion)
+      // Report first, move second: React batches both, so consumers see the
+      // new score and the new position in the same render.
+      setLastReport(result.value.report)
+      game.makeMove(result.value.move.from, result.value.move.to, result.value.move.promotion)
       setEngineStatus('idle')
     }
     void think()
@@ -122,11 +128,12 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
     if (!enabled) return
     generationRef.current++
     handleRef.current?.newGame(preset)
+    setLastReport(null)
     if (handleRef.current) setEngineStatus('idle')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, preset])
 
-  return { engineStatus, engineError, startNewGame }
+  return { engineStatus, engineError, lastReport, startNewGame }
 }
 
 export default useEngineOpponent

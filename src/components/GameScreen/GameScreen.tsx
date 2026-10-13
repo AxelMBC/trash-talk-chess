@@ -14,7 +14,9 @@ import {
 import type { AnimationPlaybackControls } from 'motion/react'
 import useChessGame from '@/hooks/useChessGame'
 import useEngineOpponent from '@/hooks/useEngineOpponent'
+import useTrashTalk from '@/hooks/useTrashTalk'
 import ChessBoard from '@/components/ChessBoard'
+import TrashTalkBubble from '@/components/TrashTalkBubble'
 import GameStatusBar from '@/components/GameStatusBar'
 import CapturedPieces from '@/components/CapturedPieces'
 import PromotionDialog from '@/components/PromotionDialog'
@@ -39,6 +41,13 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
     enabled: isComputer,
     difficulty: isComputer ? config.difficulty : 'medium',
     engineColor: playerColor === 'w' ? 'b' : 'w',
+  })
+  const trashTalk = useTrashTalk(game, {
+    enabled: isComputer,
+    difficulty: isComputer ? config.difficulty : 'medium',
+    playerColor,
+    engineStatus: engine.engineStatus,
+    lastReport: engine.lastReport,
   })
   const [orientation, setOrientation] = useState<Color>(playerColor)
   const [isTurning, setIsTurning] = useState(false)
@@ -158,6 +167,11 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
         />
 
         <CapturedPieces color={orientation === 'w' ? 'b' : 'w'} captured={game.captured} />
+
+        {/* The engine's mouth. Reserved slot (fixed height) so lines never shift the board. */}
+        {isComputer && (
+          <TrashTalkBubble line={engine.engineStatus === 'error' ? null : trashTalk.line} />
+        )}
 
         <Box sx={{ perspective: '1400px' }}>
           {/* Lift layer: scale + tilt + shadow. Never rotates, so the light direction stays put. */}
