@@ -269,7 +269,7 @@ Prompt caching (if not done in Phase 1), the Sonnet pre-game opener, said-lines 
 prevent repeats, maybe difficulty-flavored persona variants ("easy mode is condescendingly
 gentle").
 
-When you're ready to start any phase: `/opsx:propose` and this document becomes the raw
+When you're ready to start any phase: `/axl:propose` and this document becomes the raw
 material for the proposal.
 
 ---
