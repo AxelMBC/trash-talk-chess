@@ -66,10 +66,10 @@ export interface CollectProgress {
   target: number
 }
 
-const getJson = async <T>(url: string): Promise<ApiResult<T>> => {
+const getJson = async <T>(url: string, signal?: AbortSignal): Promise<ApiResult<T>> => {
   let response: Response
   try {
-    response = await fetch(url)
+    response = await fetch(url, { signal })
   } catch {
     return {
       ok: false,
@@ -100,12 +100,18 @@ const getJson = async <T>(url: string): Promise<ApiResult<T>> => {
   }
 }
 
-export const fetchProfile = (username: string): Promise<ApiResult<ChessComProfile>> =>
-  getJson<ChessComProfile>(`${API_BASE}/player/${encodeURIComponent(username)}`)
+export const fetchProfile = (
+  username: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<ChessComProfile>> =>
+  getJson<ChessComProfile>(`${API_BASE}/player/${encodeURIComponent(username)}`, signal)
 
 /** Time controls the player never touched are simply absent from the response. */
-export const fetchStats = (username: string): Promise<ApiResult<ChessComStats>> =>
-  getJson<ChessComStats>(`${API_BASE}/player/${encodeURIComponent(username)}/stats`)
+export const fetchStats = (
+  username: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<ChessComStats>> =>
+  getJson<ChessComStats>(`${API_BASE}/player/${encodeURIComponent(username)}/stats`, signal)
 
 /**
  * Collects the player's most recent standard-rules games, newest first.
@@ -118,9 +124,11 @@ export const collectRecentGames = async (
   username: string,
   limit = 100,
   onProgress?: (progress: CollectProgress) => void,
+  signal?: AbortSignal,
 ): Promise<ApiResult<ChessComGame[]>> => {
   const archiveList = await getJson<ArchiveList>(
     `${API_BASE}/player/${encodeURIComponent(username)}/games/archives`,
+    signal,
   )
   if (!archiveList.ok) return archiveList
 
@@ -128,7 +136,7 @@ export const collectRecentGames = async (
   const games: ChessComGame[] = []
 
   for (let i = 0; i < urls.length && games.length < limit; i++) {
-    const month = await getJson<MonthlyArchive>(urls[i])
+    const month = await getJson<MonthlyArchive>(urls[i], signal)
     if (!month.ok) return month
 
     // Within a month games are ordered oldest → newest, so walk backwards.

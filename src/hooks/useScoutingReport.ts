@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { collectRecentGames, fetchProfile, fetchStats } from '@/services/chesscom'
 import type { CollectProgress, ScoutError } from '@/services/chesscom'
 import { buildDossier, loadCachedDossier, saveDossier } from '@/services/dossier'
+import { rememberScoutedPlayer } from '@/services/playerBrief'
 import type { PlayerDossier } from '@/types/dossier.types'
 
 export type ScoutingState =
@@ -16,45 +17,65 @@ export interface ScoutingReport {
   scout: (username: string) => void
   /** Bypasses the cache, refetches, and overwrites the cached dossier. */
   rescout: () => void
+  /** Abandons the scout in flight: it never saves, remembers the player or updates state. */
+  cancel: () => void
 }
 
 const useScoutingReport = (): ScoutingReport => {
   const [state, setState] = useState<ScoutingState>({ phase: 'idle' })
-  const busyRef = useRef(false)
+  const activeScoutRef = useRef<AbortController | null>(null)
   const lastUsernameRef = useRef<string | null>(null)
+
+  const cancel = useCallback(() => {
+    activeScoutRef.current?.abort()
+    activeScoutRef.current = null
+  }, [])
+
+  useEffect(() => cancel, [cancel])
 
   const runScout = useCallback(async (rawUsername: string, bypassCache: boolean) => {
     const username = rawUsername.trim()
-    if (!username || busyRef.current) return
+    if (!username || activeScoutRef.current) return
     lastUsernameRef.current = username
 
     if (!bypassCache) {
       const cached = loadCachedDossier(username)
       if (cached) {
+        rememberScoutedPlayer(cached.username)
         setState({ phase: 'ready', dossier: cached, fromCache: true })
         return
       }
     }
 
-    busyRef.current = true
+    const controller = new AbortController()
+    const { signal } = controller
+    activeScoutRef.current = controller
     setState({ phase: 'loading', username, progress: null })
 
     try {
-      const profile = await fetchProfile(username)
+      const profile = await fetchProfile(username, signal)
+      if (signal.aborted) return
       if (!profile.ok) {
         setState({ phase: 'error', username, error: profile.error })
         return
       }
 
-      const stats = await fetchStats(username)
+      const stats = await fetchStats(username, signal)
+      if (signal.aborted) return
       if (!stats.ok) {
         setState({ phase: 'error', username, error: stats.error })
         return
       }
 
-      const games = await collectRecentGames(username, 100, (progress) => {
-        setState((prev) => (prev.phase === 'loading' ? { ...prev, progress } : prev))
-      })
+      const games = await collectRecentGames(
+        username,
+        100,
+        (progress) => {
+          setState((prev) => (prev.phase === 'loading' ? { ...prev, progress } : prev))
+        },
+        signal,
+      )
+      if (signal.aborted) return
       if (!games.ok) {
         setState({ phase: 'error', username, error: games.error })
         return
@@ -62,9 +83,10 @@ const useScoutingReport = (): ScoutingReport => {
 
       const dossier = buildDossier(username, profile.value, stats.value, games.value)
       saveDossier(dossier)
+      rememberScoutedPlayer(dossier.username)
       setState({ phase: 'ready', dossier, fromCache: false })
     } finally {
-      busyRef.current = false
+      if (activeScoutRef.current === controller) activeScoutRef.current = null
     }
   }, [])
 
@@ -74,7 +96,7 @@ const useScoutingReport = (): ScoutingReport => {
     if (lastUsernameRef.current) void runScout(lastUsernameRef.current, true)
   }, [runScout])
 
-  return { state, scout, rescout }
+  return { state, scout, rescout, cancel }
 }
 
 export default useScoutingReport

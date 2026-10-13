@@ -147,7 +147,12 @@ const ReportBody = ({ dossier }: { dossier: PlayerDossier }) => {
 }
 
 const ScoutingReport = ({ username, onExitToMenu }: ScoutingReportProps) => {
-  const { state, scout, rescout } = useScoutingReport()
+  const { state, scout, rescout, cancel } = useScoutingReport()
+
+  const handleExit = () => {
+    cancel()
+    onExitToMenu()
+  }
 
   useEffect(() => {
     scout(username)
@@ -165,7 +170,7 @@ const ScoutingReport = ({ username, onExitToMenu }: ScoutingReportProps) => {
     >
       <Box sx={{ maxWidth: 640, mx: 'auto' }}>
         <Stack direction="row" sx={{ mb: 3, alignItems: 'center', justifyContent: 'space-between' }}>
-          <Button onClick={onExitToMenu} color="inherit" sx={{ color: 'text.secondary' }}>
+          <Button onClick={handleExit} color="inherit" sx={{ color: 'text.secondary' }}>
             ← Menu
           </Button>
           {state.phase === 'ready' && (
@@ -209,7 +214,7 @@ const ScoutingReport = ({ username, onExitToMenu }: ScoutingReportProps) => {
                 : state.error.message}
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-              <Button variant="outlined" color="inherit" onClick={onExitToMenu}>
+              <Button variant="outlined" color="inherit" onClick={handleExit}>
                 Back to menu
               </Button>
               {state.error.kind !== 'user-not-found' && (

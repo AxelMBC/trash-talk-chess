@@ -12,5 +12,7 @@ export interface BoardSquareProps {
   rankLabel?: string
   /** Fades coordinate labels out during the turn transition. */
   labelsHidden: boolean
+  /** Accessible name: the square plus any piece on it, e.g. "e4, White Knight". */
+  label: string
   onClick: (square: Square) => void
 }

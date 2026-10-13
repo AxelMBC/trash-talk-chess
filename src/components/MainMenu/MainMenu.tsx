@@ -3,19 +3,22 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
-import { motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { PIECE_IMAGES } from '@/utils/pieces'
 import type { Difficulty } from '@/types/chess.types'
-import type { FloatingPieceConfig, MainMenuProps } from './MainMenu.types'
+import type { ComputerEntry, FloatingPieceConfig, MainMenuProps } from './MainMenu.types'
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easy', label: 'Easy' },
   { value: 'medium', label: 'Medium' },
   { value: 'hard', label: 'Hard' },
 ]
+
+const MENU_COLUMN_WIDTH = 380
+const MODE_BUTTON_HEIGHT = 60
+
+const modeButtonSx = { height: MODE_BUTTON_HEIGHT, fontSize: '1.15rem' }
 
 const FLOATING_PIECES: FloatingPieceConfig[] = [
   { image: PIECE_IMAGES.w.n, size: 110, top: '12%', left: '8%', duration: 7, delay: 0, opacity: 0.1 },
@@ -29,7 +32,9 @@ const FLOATING_PIECES: FloatingPieceConfig[] = [
 const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
   const reduceMotion = useReducedMotion()
   const [username, setUsername] = useState('')
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium')
+  const [computerEntry, setComputerEntry] = useState<ComputerEntry>('closed')
+  const isPickingLevel = computerEntry === 'picking'
+  const entryTransition = { duration: reduceMotion ? 0 : 0.16 }
   const trimmedUsername = username.trim()
 
   const submitScout = () => {
@@ -53,7 +58,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
     >
       {FLOATING_PIECES.map((piece, index) => (
         <motion.img
-          key={index}
+          key={piece.image}
           src={piece.image}
           alt=""
           aria-hidden
@@ -123,66 +128,101 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55, duration: 0.5 }}
-        whileHover={reduceMotion ? undefined : { scale: 1.05 }}
-        whileTap={{ scale: 0.97 }}
-        style={{ marginTop: 44 }}
+        style={{ marginTop: 44, width: '100%', maxWidth: MENU_COLUMN_WIDTH }}
       >
-        <Button
-          variant="contained"
-          size="large"
-          onClick={onPlayLocal}
-          startIcon={
-            <img src={PIECE_IMAGES.b.n} alt="" aria-hidden style={{ width: 30, height: 30 }} />
-          }
-          sx={{
-            px: 6,
-            py: 1.75,
-            fontSize: '1.15rem',
-            boxShadow: '0 10px 34px rgba(245, 185, 66, 0.35)',
-          }}
-        >
-          Local
-        </Button>
-      </motion.div>
+        <Stack spacing={2}>
+          <motion.div
+            whileHover={reduceMotion ? undefined : { scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <Button
+              variant="contained"
+              size="large"
+              fullWidth
+              onClick={onPlayLocal}
+              startIcon={
+                <img src={PIECE_IMAGES.b.n} alt="" aria-hidden style={{ width: 30, height: 30 }} />
+              }
+              sx={{
+                ...modeButtonSx,
+                boxShadow: '0 10px 34px rgba(245, 185, 66, 0.35)',
+              }}
+            >
+              Local
+            </Button>
+          </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.65, duration: 0.5 }}
-        style={{ marginTop: 20 }}
-      >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          useFlexGap
-          sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}
-        >
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={() => onPlayComputer(difficulty)}
-            startIcon={
-              <img src={PIECE_IMAGES.w.n} alt="" aria-hidden style={{ width: 26, height: 26 }} />
-            }
-            sx={{ px: 4, py: 1.25, flexShrink: 0 }}
-          >
-            vs Computer
-          </Button>
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={difficulty}
-            onChange={(_event, value: Difficulty | null) => {
-              if (value) setDifficulty(value)
-            }}
-            aria-label="computer difficulty"
-          >
-            {DIFFICULTIES.map(({ value, label }) => (
-              <ToggleButton key={value} value={value} sx={{ px: 1.75, fontWeight: 700 }}>
-                {label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+          <Box sx={{ height: MODE_BUTTON_HEIGHT }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {isPickingLevel ? (
+                <motion.div
+                  key="levels"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={entryTransition}
+                  style={{ height: '100%' }}
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    role="group"
+                    aria-label="computer difficulty"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') setComputerEntry('dismissed')
+                    }}
+                    sx={{ height: '100%' }}
+                  >
+                    <Button
+                      variant="outlined"
+                      color="inherit"
+                      aria-label="Back to game modes"
+                      onClick={() => setComputerEntry('dismissed')}
+                      sx={{ minWidth: 0, px: 2, height: '100%', fontSize: '1.15rem' }}
+                    >
+                      ←
+                    </Button>
+                    {DIFFICULTIES.map(({ value, label }, index) => (
+                      <Button
+                        key={value}
+                        variant="outlined"
+                        autoFocus={index === 0}
+                        onClick={() => onPlayComputer(value)}
+                        sx={{ flex: 1, height: '100%', fontSize: '1.05rem' }}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </Stack>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="mode"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={entryTransition}
+                  whileHover={reduceMotion ? undefined : { scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  style={{ height: '100%' }}
+                >
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    fullWidth
+                    autoFocus={computerEntry === 'dismissed'}
+                    onClick={() => setComputerEntry('picking')}
+                    startIcon={
+                      <img src={PIECE_IMAGES.w.n} alt="" aria-hidden style={{ width: 30, height: 30 }} />
+                    }
+                    sx={modeButtonSx}
+                  >
+                    vs Computer
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Box>
         </Stack>
       </motion.div>
 
@@ -190,7 +230,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.5 }}
-        style={{ marginTop: 28, width: '100%', maxWidth: 380 }}
+        style={{ marginTop: 28, width: '100%', maxWidth: MENU_COLUMN_WIDTH }}
       >
         <Stack direction="row" spacing={1.5}>
           <TextField
