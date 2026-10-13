@@ -37,8 +37,10 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
   })
   // The table-turn is a pass-and-play ritual; vs the computer the board
   // stays fixed toward the human player for the whole game.
-  const { orientation, isTurning, boardRotation, boardScale, boardTilt, reset: resetTable } =
-    useTableTurn(game.turn, game.status, { enabled: !isComputer, homeOrientation: playerColor })
+  const { orientation, isTurning, boardRotation, boardScale, boardTilt } = useTableTurn(game, {
+    enabled: !isComputer,
+    homeOrientation: playerColor,
+  })
   const gameOver = isGameOver(game.status)
   /** vs computer: the human can only act on their own turn with a live engine. */
   const engineBlocksInput =
@@ -49,11 +51,7 @@ const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {
     game.selectSquare(square)
   }
 
-  const handleRematch = () => {
-    resetTable()
-    game.reset()
-    engine.startNewGame()
-  }
+  const handleRematch = () => game.reset()
 
   return (
     <Box

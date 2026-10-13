@@ -23,6 +23,8 @@ interface ChessGameState {
   pendingPromotion: PendingPromotion | null
   moveNumber: number
   checkSquare: Square | null
+  /** Bumped by `reset()`; per-game hooks reset their own state when it changes. */
+  gameId: number
 }
 
 export interface ChessGame extends ChessGameState {
@@ -87,7 +89,7 @@ const updatePieces = (pieces: TrackedPiece[], move: Move): TrackedPiece[] => {
   return next
 }
 
-const createInitialState = (chess: Chess): ChessGameState => ({
+const createInitialState = (chess: Chess, gameId: number): ChessGameState => ({
   pieces: buildPieces(chess),
   turn: 'w',
   status: 'playing',
@@ -99,12 +101,13 @@ const createInitialState = (chess: Chess): ChessGameState => ({
   pendingPromotion: null,
   moveNumber: 1,
   checkSquare: null,
+  gameId,
 })
 
 const useChessGame = (): ChessGame => {
   const chessRef = useRef<Chess>(null)
   chessRef.current ??= new Chess()
-  const [state, setState] = useState<ChessGameState>(() => createInitialState(chessRef.current!))
+  const [state, setState] = useState<ChessGameState>(() => createInitialState(chessRef.current!, 0))
 
   const makeMove = (from: Square, to: Square, promotion?: PromotionPiece) => {
     const chess = chessRef.current!
@@ -176,7 +179,8 @@ const useChessGame = (): ChessGame => {
 
   const reset = () => {
     chessRef.current = new Chess()
-    setState(createInitialState(chessRef.current))
+    const chess = chessRef.current
+    setState((prev) => createInitialState(chess, prev.gameId + 1))
   }
 
   const getFen = () => chessRef.current!.fen()

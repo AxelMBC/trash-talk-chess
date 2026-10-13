@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { Color } from 'chess.js'
 import { animate, useMotionValue, useReducedMotion } from 'motion/react'
 import type { AnimationPlaybackControls, MotionValue } from 'motion/react'
-import type { GameStatus } from '@/types/chess.types'
+import type { ChessGame } from '@/hooks/useChessGame'
 import { isGameOver } from '@/utils/board'
 
 /** Overlap window: the orbit starts gently while the moved piece finishes its glide. */
@@ -26,15 +26,14 @@ export interface TableTurn {
   boardRotation: MotionValue<number>
   boardScale: MotionValue<number>
   boardTilt: MotionValue<number>
-  /** Call on rematch: stops the turn in flight and puts the board back at home. */
-  reset: () => void
 }
 
 /**
  * Pass-and-play table turn: after each move the board lifts, orbits 180° in
  * plane and settles back facing the player to move.
  */
-const useTableTurn = (turn: Color, status: GameStatus, config: TableTurnConfig): TableTurn => {
+const useTableTurn = (game: ChessGame, config: TableTurnConfig): TableTurn => {
+  const { turn, status, gameId } = game
   const { enabled, homeOrientation } = config
   const [orientation, setOrientation] = useState<Color>(homeOrientation)
   const [isTurning, setIsTurning] = useState(false)
@@ -43,8 +42,25 @@ const useTableTurn = (turn: Color, status: GameStatus, config: TableTurnConfig):
   const boardTilt = useMotionValue(0)
   const reduceMotion = useReducedMotion()
   const prevTurnRef = useRef<Color>('w')
-  /** Rematch can leave `turn` unchanged, so `reset` stops the turn in flight itself. */
+  /** Rematch can leave `turn` unchanged, so the rematch reset stops the turn in flight itself. */
   const cancelTurnRef = useRef<() => void>(() => {})
+  const seenGameIdRef = useRef(gameId)
+
+  // Rematch: stop the turn in flight and put the board back at home. A layout
+  // effect so the new position never paints in the old orientation, declared
+  // before the turn effect so a rematch from Black's turn doesn't read as a move.
+  useLayoutEffect(() => {
+    if (gameId === seenGameIdRef.current) return
+    seenGameIdRef.current = gameId
+    cancelTurnRef.current()
+    prevTurnRef.current = turn
+    setOrientation(homeOrientation)
+    setIsTurning(false)
+    boardRotation.jump(0)
+    boardScale.jump(1)
+    boardTilt.jump(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId])
 
   useEffect(() => {
     if (!enabled) return
@@ -101,17 +117,7 @@ const useTableTurn = (turn: Color, status: GameStatus, config: TableTurnConfig):
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turn])
 
-  const reset = () => {
-    cancelTurnRef.current()
-    prevTurnRef.current = 'w'
-    setOrientation(homeOrientation)
-    setIsTurning(false)
-    boardRotation.jump(0)
-    boardScale.jump(1)
-    boardTilt.jump(0)
-  }
-
-  return { orientation, isTurning, boardRotation, boardScale, boardTilt, reset }
+  return { orientation, isTurning, boardRotation, boardScale, boardTilt }
 }
 
 export default useTableTurn

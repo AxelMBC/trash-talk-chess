@@ -1,0 +1,13 @@
+# Review: rematch-via-game-id
+
+Snapshot: afa6ea2cc4f60bc815ae58f4f88946b3caec0ed9
+
+Scope: the change's uncommitted diff (`git diff HEAD`) in `useChessGame`, `useEngineOpponent`, `useTrashTalk`,
+`useTableTurn` and `GameScreen`; earlier commits on the branch belong to already-reviewed work.
+
+1. [defect] src/hooks/useTrashTalk.ts:112 and :157-182 (cause src/hooks/useEngineOpponent.ts:94) — `lastReport` is no longer cleared in the rematch render: the engine's gameId effect clears it one commit later. In the rematch commit the trash-talk reset sets `seenReportRef` to null, then the reply effect re-runs on the changed `turn`/`status` and judges the old game's last report: it seeds `prevScoreRef` with the old score, can count a blunder, and shows a line (an `engineMateSoon` "mate in 1" after a checkmate loss), adding its id to `saidIdsRef`. Breaks "Rematch wipes the session" and earned escalation · fixed
+   Fix: derive instead of sync — store `{ gameId, report }` in `useEngineOpponent` (stamped from `game.gameId` at search start) and return `lastReport` only when its `gameId === game.gameId`. Minimal alternative: in the trash-talk reset effect set `seenReportRef.current = lastReport` instead of `null`.
+2. [defect] src/hooks/useEngineOpponent.ts:138 — latent: the turn loop's deps lack `game.gameId`. With the engine playing White, a rematch during its search leaves `turn`/`status`/`pendingPromotion` unchanged, the bumped generation discards the search, and nothing searches again: the engine never moves and input stays blocked. Not reachable today (`src/App.tsx:31` hard-codes `playerColor: 'w'`) · fixed
+   Fix: add `game.gameId` to the turn loop's deps; it is declared after the gameId effect, so the new search sees the bumped generation.
+3. [defect] src/hooks/useEngineOpponent.ts:143 (cause src/services/engine.ts:163-174) — latent: with fix 2, a rematch that leaves the engine to move starts a new `bestMove` in the same commit that `newGame` sends `stop`. The new search's listener is attached before the worker answers the `stop`, so the old search's `bestmove`/`info` lines resolve it `ok` with the old game's move and score. The move is usually illegal from the start position, `makeMove` swallows it, status goes `idle` and no turn-loop dep changes: the engine stalls, and the old score is stored under the new `gameId`. Not reachable today (the human always plays White) · fixed
+   Fix: in `engine.ts`, drain any earlier search before starting one — post `isready` and ignore every line until `readyok` (UCI answers in order), then send `position`/`go`; or chain each search after the previous search's promise settles.

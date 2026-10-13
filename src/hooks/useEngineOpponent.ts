@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Color } from 'chess.js'
 import type { ChessGame } from '@/hooks/useChessGame'
 import { createEngine, ENGINE_PRESETS } from '@/services/engine'
@@ -23,8 +23,6 @@ export interface EngineOpponent {
   engineError: EngineError | null
   /** Deepest score seen in the engine's latest completed search (for trash talk). */
   lastReport: SearchReport | null
-  /** Call on rematch: discards in-flight searches and resets the engine. */
-  startNewGame: () => void
 }
 
 /**
@@ -40,12 +38,18 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
 
   const [engineStatus, setEngineStatus] = useState<EngineStatus>(enabled ? 'loading' : 'off')
   const [engineError, setEngineError] = useState<EngineError | null>(null)
-  const [lastReport, setLastReport] = useState<SearchReport | null>(null)
+  // Tagged with its game so a rematch never exposes the previous game's score,
+  // not even in the render before the rematch effect runs.
+  const [taggedReport, setTaggedReport] = useState<{
+    gameId: number
+    report: SearchReport | null
+  } | null>(null)
   const [ready, setReady] = useState(false)
   const handleRef = useRef<EngineHandle | null>(null)
   // Bumped on rematch/unmount; async continuations from an older generation
   // must never touch the current game.
   const generationRef = useRef(0)
+  const seenGameIdRef = useRef(game.gameId)
 
   // Engine lifecycle: one worker per mounted vs-computer game.
   useEffect(() => {
@@ -84,6 +88,19 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled])
 
+  // Rematch: discard in-flight searches and reset the engine. Declared before
+  // the turn loop so the new game's first search sees the bumped generation.
+  useEffect(() => {
+    if (game.gameId === seenGameIdRef.current) return
+    seenGameIdRef.current = game.gameId
+    if (!enabled) return
+    generationRef.current++
+    handleRef.current?.newGame(preset)
+    if (handleRef.current) setEngineStatus('idle')
+    // Difficulty is fixed for the lifetime of a game screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.gameId, enabled])
+
   // Turn loop: when it's the engine's move, think, then play.
   useEffect(() => {
     if (!enabled || !ready) return
@@ -92,6 +109,7 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
     if (game.turn !== engineColor || isGameOver(game.status) || game.pendingPromotion) return
 
     const generation = generationRef.current
+    const { gameId } = game
     let cancelled = false
     setEngineStatus('thinking')
 
@@ -111,7 +129,7 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
 
       // Report first, move second: React batches both, so consumers see the
       // new score and the new position in the same render.
-      setLastReport(result.value.report)
+      setTaggedReport({ gameId, report: result.value.report })
       game.makeMove(result.value.move.from, result.value.move.to, result.value.move.promotion)
       setEngineStatus('idle')
     }
@@ -122,18 +140,11 @@ const useEngineOpponent = (game: ChessGame, config: EngineOpponentConfig): Engin
     }
     // `game`'s callbacks are recreated per render; the triggers are the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, ready, engineColor, game.turn, game.status, game.pendingPromotion])
+  }, [enabled, ready, engineColor, game.turn, game.status, game.pendingPromotion, game.gameId])
 
-  const startNewGame = useCallback(() => {
-    if (!enabled) return
-    generationRef.current++
-    handleRef.current?.newGame(preset)
-    setLastReport(null)
-    if (handleRef.current) setEngineStatus('idle')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, preset])
+  const lastReport = taggedReport?.gameId === game.gameId ? taggedReport.report : null
 
-  return { engineStatus, engineError, lastReport, startNewGame }
+  return { engineStatus, engineError, lastReport }
 }
 
 export default useEngineOpponent

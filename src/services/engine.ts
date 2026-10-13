@@ -140,6 +140,10 @@ export const createEngine = async (): Promise<EngineResult<EngineHandle>> => {
   // Bumped by newGame/dispose; searches started under an older generation
   // resolve as 'stale' and their bestmove lines are ignored.
   let generation = 0
+  // Every search reads the worker's one output stream. A search that started
+  // listening before the previous one saw its own bestmove would take that
+  // line as its answer, so searches run one after another.
+  let previousSearch: Promise<unknown> = Promise.resolve()
 
   const newGame = (preset: EnginePreset) => {
     generation++
@@ -150,6 +154,22 @@ export const createEngine = async (): Promise<EngineResult<EngineHandle>> => {
 
   const bestMove = (fen: string, preset: EnginePreset): Promise<EngineResult<SearchOutcome>> => {
     const searchGeneration = generation
+    const search = previousSearch.then(() => runSearch(fen, preset, searchGeneration))
+    previousSearch = search
+    return search
+  }
+
+  const runSearch = (
+    fen: string,
+    preset: EnginePreset,
+    searchGeneration: number,
+  ): Promise<EngineResult<SearchOutcome>> => {
+    if (searchGeneration !== generation) {
+      return Promise.resolve({
+        ok: false,
+        error: { kind: 'stale', message: 'Search superseded by a new game.' },
+      })
+    }
     return new Promise((resolve) => {
       let report: SearchReport | null = null
       const timer = setTimeout(

@@ -107,7 +107,6 @@ const useTrashTalk = (
 
   // Rematch (and first mount): wipe all commentary and session state.
   useEffect(() => {
-    if (game.lastMove !== null) return
     prevScoreRef.current = 0
     awaitingQualityRef.current = false
     seenReportRef.current = null
@@ -119,12 +118,12 @@ const useTrashTalk = (
     setLine(null)
     if (enabled) profileRef.current = getPlayerProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.lastMove, enabled])
+  }, [game.gameId, enabled])
 
   // Stopwatch for the player's think time on each of their turns.
   useEffect(() => {
     if (enabled && game.turn === playerColor) turnStartedAtRef.current = Date.now()
-  }, [enabled, game.turn, playerColor])
+  }, [enabled, game.turn, playerColor, game.gameId])
 
   // Player moved: react instantly to showy events (fork/promotion/check/
   // capture); quiet moves wait for the engine's score to be judged.
@@ -189,7 +188,7 @@ const useTrashTalk = (
     const timer = setTimeout(() => show('slowPlay'), SLOW_PLAY_THRESHOLD_MS)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, playerColor, game.turn, game.status, engineStatus])
+  }, [enabled, playerColor, game.turn, game.status, engineStatus, game.gameId])
 
   // Unmount: nothing may fire into a dead screen.
   useEffect(
