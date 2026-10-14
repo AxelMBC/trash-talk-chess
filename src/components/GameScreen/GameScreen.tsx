@@ -16,11 +16,11 @@ import EngineErrorOverlay from '@/components/EngineErrorOverlay'
 import RookCollage from '@/components/RookCollage'
 import { STICKER_COLORS } from '@/theme/theme'
 import { STICKER_RADIUS, stickerButtonSx } from '@/theme/sticker'
+import { ENGINE_NAME } from '@/services/engine'
 import { colorName, isGameOver } from '@/utils/board'
 import { DIFFICULTY_LABELS } from '@/utils/difficulty'
 import type { GameScreenProps } from './GameScreen.types'
 
-const ENGINE_NAME = 'Stockfish'
 const BOARD_SHADOW_OFFSET_PX = 8
 
 const GameScreen = ({ config, onExitToMenu }: GameScreenProps) => {

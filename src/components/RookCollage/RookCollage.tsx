@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { STICKER_COLORS, STICKER_PALETTE } from '@/theme/theme'
@@ -15,7 +16,6 @@ const MAX_TILT_DEGREES = 35
 const KNOCKED_OVER_CHANCE = 0.12
 const LAYOUT_SEED = 7
 
-const ROOK_SYMBOL_ID = 'rook-collage-rook'
 const ROOK_SIZE = 45
 const DIE_CUT_WIDTH = 6
 const OUTLINE_WIDTH = 1.5
@@ -85,6 +85,7 @@ const STICKERS: readonly RookSticker[] = buildStickers()
 
 const RookCollage = ({ tone = 'loud' }: RookCollageProps) => {
   const { fills, edge, outline, shadow, shade } = TONES[tone]
+  const rookSymbolId = `rook-collage-${useId()}`
 
   return (
     <>
@@ -98,7 +99,7 @@ const RookCollage = ({ tone = 'loud' }: RookCollageProps) => {
         <defs>
           {/* Paths copied from src/assets/pieces/wR.svg without fill/stroke so each <use> can recolor them;
               Vite inlines that file as a data: URI, which <use> refuses to reference. */}
-          <symbol id={ROOK_SYMBOL_ID} viewBox={`0 0 ${ROOK_SIZE} ${ROOK_SIZE}`}>
+          <symbol id={rookSymbolId} viewBox={`0 0 ${ROOK_SIZE} ${ROOK_SIZE}`}>
             <g fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
               <path strokeLinecap="butt" d="M9 39h27v-3H9zm3-3v-4h21v4zm-1-22V9h4v2h5V9h5v2h5V9h4v5" />
               <path d="m34 14-3 3H14l-3-3" />
@@ -112,7 +113,7 @@ const RookCollage = ({ tone = 'loud' }: RookCollageProps) => {
         {STICKERS.map((sticker) => (
           <g key={sticker.id}>
             <use
-              href={`#${ROOK_SYMBOL_ID}`}
+              href={`#${rookSymbolId}`}
               {...rookUseBox}
               transform={sticker.shadowTransform}
               fill={shadow}
@@ -121,14 +122,14 @@ const RookCollage = ({ tone = 'loud' }: RookCollageProps) => {
             />
             <g transform={sticker.transform}>
               <use
-                href={`#${ROOK_SYMBOL_ID}`}
+                href={`#${rookSymbolId}`}
                 {...rookUseBox}
                 fill={edge}
                 stroke={edge}
                 strokeWidth={DIE_CUT_WIDTH}
               />
               <use
-                href={`#${ROOK_SYMBOL_ID}`}
+                href={`#${rookSymbolId}`}
                 {...rookUseBox}
                 fill={fills[Math.floor(sticker.fillPick * fills.length)]}
                 stroke={outline}

@@ -73,6 +73,12 @@ export const posterTextSx = {
   textShadow: hardShadow(6),
 }
 
+export const smallPosterTextSx = {
+  ...posterTextSx,
+  WebkitTextStroke: `2px ${STICKER_COLORS.ink}`,
+  textShadow: hardShadow(4),
+}
+
 export const labelStickerSx = (background: string, shadowOffset: number) => ({
   fontFamily: DISPLAY_FONT_FAMILY,
   color: STICKER_COLORS.ink,
