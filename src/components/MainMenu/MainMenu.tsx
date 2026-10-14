@@ -4,87 +4,42 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { alpha } from '@mui/material/styles'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import RookCollage from '@/components/RookCollage'
 import { DISPLAY_FONT_FAMILY, STICKER_COLORS } from '@/theme/theme'
+import {
+  STICKER_RADIUS,
+  focusOutlineSx,
+  labelStickerSx,
+  posterTextSx,
+  speechBubbleSx,
+  stickerButtonSx,
+  stickerPanelSx,
+} from '@/theme/sticker'
+import { DIFFICULTY_LABELS } from '@/utils/difficulty'
 import { PIECE_IMAGES } from '@/utils/pieces'
 import type { Difficulty } from '@/types/chess.types'
 import type { ComputerEntry, MainMenuProps } from './MainMenu.types'
 
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
-]
+const DIFFICULTIES: readonly Difficulty[] = ['easy', 'medium', 'hard']
 
 const MENU_PANEL_WIDTH = 400
 const MODE_BUTTON_HEIGHT = 60
-const STICKER_RADIUS = '6px'
 const COMPUTER_TAUNT = 'Bold of you to show up.'
 
 const titleSpring = { type: 'spring', stiffness: 520, damping: 22 } as const
 
-const hardShadow = (offset: number) => `${offset}px ${offset}px 0 ${STICKER_COLORS.ink}`
-
-const focusOutlineSx = {
-  '&.Mui-focusVisible': {
-    outline: '3px solid',
-    outlineColor: 'secondary.main',
-    outlineOffset: 3,
-  },
-}
-
-const stickerButtonSx = (background: string) => ({
-  '&.Mui-focusVisible': { ...focusOutlineSx['&.Mui-focusVisible'], boxShadow: hardShadow(4) },
-  height: '100%',
-  fontWeight: 800,
-  bgcolor: background,
-  color: STICKER_COLORS.ink,
-  border: `3px solid ${STICKER_COLORS.ink}`,
-  borderRadius: STICKER_RADIUS,
-  boxShadow: hardShadow(4),
-  transition: 'transform 80ms, box-shadow 80ms',
-  '&:hover': { bgcolor: background, transform: 'translate(-1px, -1px)', boxShadow: hardShadow(5) },
-  '&:active': { transform: 'translate(4px, 4px)', boxShadow: hardShadow(0) },
-  '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-})
-
 const modeButtonSx = { fontSize: '1.15rem' }
 
-const tauntBubbleSx = {
+const tauntPlacementSx = {
   position: 'absolute',
   zIndex: 1,
   pointerEvents: 'none',
   whiteSpace: 'nowrap',
-  bgcolor: STICKER_COLORS.paper,
-  color: STICKER_COLORS.ink,
-  fontWeight: 800,
-  fontSize: '0.86rem',
-  lineHeight: 1.2,
-  px: 1.5,
-  py: 1.125,
-  border: `2.5px solid ${STICKER_COLORS.ink}`,
-  borderRadius: '12px',
-  boxShadow: hardShadow(4),
   top: { xs: 'calc(100% + 16px)', md: '50%' },
   right: { xs: 8, md: 'auto' },
   left: { md: 'calc(100% + 44px)' },
   transform: { xs: 'rotate(-3deg)', md: 'translateY(-50%) rotate(4deg)' },
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    bgcolor: STICKER_COLORS.paper,
-    borderLeft: `2.5px solid ${STICKER_COLORS.ink}`,
-    transform: 'rotate(45deg)',
-    top: { xs: -9, md: 'calc(50% - 7px)' },
-    right: { xs: 28, md: 'auto' },
-    left: { md: -9 },
-    borderTop: { xs: `2.5px solid ${STICKER_COLORS.ink}`, md: 'none' },
-    borderBottom: { md: `2.5px solid ${STICKER_COLORS.ink}` },
-  },
 } as const
 
 const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
@@ -114,18 +69,6 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
       }}
     >
       <RookCollage />
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background: (theme) => {
-            const shade = theme.palette.background.default
-            return `radial-gradient(ellipse 46% 58% at 50% 50%, ${alpha(shade, 0.78)}, ${alpha(shade, 0.2)} 75%, ${alpha(shade, 0.05)})`
-          },
-        }}
-      />
 
       <Typography
         variant="h1"
@@ -152,10 +95,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
               fontSize: 'clamp(3rem, 11vw, 7.2rem)',
               lineHeight: 0.9,
               letterSpacing: '0.01em',
-              color: STICKER_COLORS.paper,
-              WebkitTextStroke: `3px ${STICKER_COLORS.ink}`,
-              paintOrder: 'stroke fill',
-              textShadow: hardShadow(6),
+              ...posterTextSx,
             }}
           >
             TRASH TALK
@@ -174,13 +114,10 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
               fontSize: 'clamp(2.2rem, 7.5vw, 4.6rem)',
               lineHeight: 1,
               letterSpacing: '0.18em',
-              color: STICKER_COLORS.ink,
-              bgcolor: 'primary.main',
+              ...labelStickerSx('primary.main', 6),
               px: 2.75,
               pt: 0.25,
               pb: 0.75,
-              border: `3px solid ${STICKER_COLORS.ink}`,
-              boxShadow: hardShadow(6),
             }}
           >
             CHESS
@@ -199,10 +136,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 1fr)',
             gap: 1.75,
-            bgcolor: 'background.paper',
-            border: `3px solid ${STICKER_COLORS.ink}`,
-            borderRadius: STICKER_RADIUS,
-            boxShadow: hardShadow(8),
+            ...stickerPanelSx,
             px: { xs: 2, sm: 2.5 },
             pt: 2.75,
             pb: 2.25,
@@ -251,7 +185,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
                     >
                       ←
                     </Button>
-                    {DIFFICULTIES.map(({ value, label }, index) => (
+                    {DIFFICULTIES.map((value, index) => (
                       <Button
                         key={value}
                         variant="contained"
@@ -265,7 +199,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
                           fontSize: { xs: '0.95rem', sm: '1.05rem' },
                         }}
                       >
-                        {label}
+                        {DIFFICULTY_LABELS[value]}
                       </Button>
                     ))}
                   </Stack>
@@ -294,7 +228,7 @@ const MainMenu = ({ onPlayLocal, onPlayComputer, onScout }: MainMenuProps) => {
                 </motion.div>
               )}
             </AnimatePresence>
-            <Box sx={tauntBubbleSx}>
+            <Box sx={[speechBubbleSx({ xs: 'up', md: 'left' }), tauntPlacementSx]}>
               {COMPUTER_TAUNT}
             </Box>
           </Box>

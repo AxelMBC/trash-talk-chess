@@ -1,5 +1,7 @@
-import theme, { BOARD_COLORS, STICKER_COLORS } from '@/theme/theme'
-import type { RookSticker } from './RookCollage.types'
+import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
+import { STICKER_COLORS, STICKER_PALETTE } from '@/theme/theme'
+import type { CollageTone, CollageToneColors, RookCollageProps, RookSticker } from './RookCollage.types'
 
 const VIEW_WIDTH = 1600
 const VIEW_HEIGHT = 900
@@ -20,16 +22,22 @@ const OUTLINE_WIDTH = 1.5
 const SHADOW_OFFSET = { x: 6, y: 9 }
 const BACKDROP_COLOR = '#1a1410'
 
-const PALETTE = [
-  theme.palette.primary.main,
-  theme.palette.secondary.main,
-  BOARD_COLORS.lightSquare,
-  '#ff4f9a',
-  '#ff5a36',
-  '#3d7bff',
-  '#b6e34a',
-  '#1b1f2a',
-] as const
+const TONES: Record<CollageTone, CollageToneColors> = {
+  loud: {
+    fills: Object.values(STICKER_PALETTE),
+    edge: STICKER_COLORS.paper,
+    outline: STICKER_COLORS.ink,
+    shadow: STICKER_COLORS.ink,
+    shade: { ellipse: '46% 58%', center: 0.78, middle: 0.2, rim: 0.05 },
+  },
+  quiet: {
+    fills: ['#241c15', '#2a2119', '#2d231b', '#30261d'],
+    edge: '#3a2f25',
+    outline: '#120e0b',
+    shadow: '#0d0a08',
+    shade: { ellipse: '50% 62%', center: 0.88, middle: 0.45, rim: 0.2 },
+  },
+}
 
 const rookUseBox = { x: -ROOK_SIZE / 2, y: -ROOK_SIZE / 2, width: ROOK_SIZE, height: ROOK_SIZE }
 
@@ -57,12 +65,12 @@ const buildStickers = (): RookSticker[] => {
         ? (random() < 0.5 ? -1 : 1) * (80 + random() * 20)
         : (random() * 2 - 1) * MAX_TILT_DEGREES
       const scale = MIN_SCALE + random() * SCALE_RANGE
-      const color = PALETTE[Math.floor(random() * PALETTE.length)]
+      const fillPick = random()
       const pose = `rotate(${tilt.toFixed(1)}) scale(${scale.toFixed(2)})`
 
       placed.push({
         id: `${row}-${column}`,
-        color,
+        fillPick,
         transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) ${pose}`,
         shadowTransform: `translate(${(x + SHADOW_OFFSET.x).toFixed(1)} ${(y + SHADOW_OFFSET.y).toFixed(1)}) ${pose}`,
         depth: random(),
@@ -75,57 +83,75 @@ const buildStickers = (): RookSticker[] => {
 
 const STICKERS: readonly RookSticker[] = buildStickers()
 
-const RookCollage = () => (
-  <svg
-    viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-    preserveAspectRatio="xMidYMid slice"
-    aria-hidden
-    focusable="false"
-    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-  >
-    <defs>
-      {/* Paths copied from src/assets/pieces/wR.svg without fill/stroke so each <use> can recolor them;
-          Vite inlines that file as a data: URI, which <use> refuses to reference. */}
-      <symbol id={ROOK_SYMBOL_ID} viewBox={`0 0 ${ROOK_SIZE} ${ROOK_SIZE}`}>
-        <g fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
-          <path strokeLinecap="butt" d="M9 39h27v-3H9zm3-3v-4h21v4zm-1-22V9h4v2h5V9h5v2h5V9h4v5" />
-          <path d="m34 14-3 3H14l-3-3" />
-          <path strokeLinecap="butt" strokeLinejoin="miter" d="M31 17v12.5H14V17" />
-          <path d="m31 29.5 1.5 2.5h-20l1.5-2.5" />
-          <path fill="none" strokeLinejoin="miter" d="M11 14h23" />
-        </g>
-      </symbol>
-    </defs>
-    <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill={BACKDROP_COLOR} />
-    {STICKERS.map((sticker) => (
-      <g key={sticker.id}>
-        <use
-          href={`#${ROOK_SYMBOL_ID}`}
-          {...rookUseBox}
-          transform={sticker.shadowTransform}
-          fill={STICKER_COLORS.ink}
-          stroke={STICKER_COLORS.ink}
-          strokeWidth={DIE_CUT_WIDTH}
-        />
-        <g transform={sticker.transform}>
-          <use
-            href={`#${ROOK_SYMBOL_ID}`}
-            {...rookUseBox}
-            fill={STICKER_COLORS.paper}
-            stroke={STICKER_COLORS.paper}
-            strokeWidth={DIE_CUT_WIDTH}
-          />
-          <use
-            href={`#${ROOK_SYMBOL_ID}`}
-            {...rookUseBox}
-            fill={sticker.color}
-            stroke={STICKER_COLORS.ink}
-            strokeWidth={OUTLINE_WIDTH}
-          />
-        </g>
-      </g>
-    ))}
-  </svg>
-)
+const RookCollage = ({ tone = 'loud' }: RookCollageProps) => {
+  const { fills, edge, outline, shadow, shade } = TONES[tone]
+
+  return (
+    <>
+      <svg
+        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden
+        focusable="false"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+      >
+        <defs>
+          {/* Paths copied from src/assets/pieces/wR.svg without fill/stroke so each <use> can recolor them;
+              Vite inlines that file as a data: URI, which <use> refuses to reference. */}
+          <symbol id={ROOK_SYMBOL_ID} viewBox={`0 0 ${ROOK_SIZE} ${ROOK_SIZE}`}>
+            <g fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+              <path strokeLinecap="butt" d="M9 39h27v-3H9zm3-3v-4h21v4zm-1-22V9h4v2h5V9h5v2h5V9h4v5" />
+              <path d="m34 14-3 3H14l-3-3" />
+              <path strokeLinecap="butt" strokeLinejoin="miter" d="M31 17v12.5H14V17" />
+              <path d="m31 29.5 1.5 2.5h-20l1.5-2.5" />
+              <path fill="none" strokeLinejoin="miter" d="M11 14h23" />
+            </g>
+          </symbol>
+        </defs>
+        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill={BACKDROP_COLOR} />
+        {STICKERS.map((sticker) => (
+          <g key={sticker.id}>
+            <use
+              href={`#${ROOK_SYMBOL_ID}`}
+              {...rookUseBox}
+              transform={sticker.shadowTransform}
+              fill={shadow}
+              stroke={shadow}
+              strokeWidth={DIE_CUT_WIDTH}
+            />
+            <g transform={sticker.transform}>
+              <use
+                href={`#${ROOK_SYMBOL_ID}`}
+                {...rookUseBox}
+                fill={edge}
+                stroke={edge}
+                strokeWidth={DIE_CUT_WIDTH}
+              />
+              <use
+                href={`#${ROOK_SYMBOL_ID}`}
+                {...rookUseBox}
+                fill={fills[Math.floor(sticker.fillPick * fills.length)]}
+                stroke={outline}
+                strokeWidth={OUTLINE_WIDTH}
+              />
+            </g>
+          </g>
+        ))}
+      </svg>
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: (theme) => {
+            const base = theme.palette.background.default
+            return `radial-gradient(ellipse ${shade.ellipse} at 50% 50%, ${alpha(base, shade.center)}, ${alpha(base, shade.middle)} 75%, ${alpha(base, shade.rim)})`
+          },
+        }}
+      />
+    </>
+  )
+}
 
 export default RookCollage

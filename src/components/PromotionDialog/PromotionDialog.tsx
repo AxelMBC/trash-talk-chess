@@ -3,6 +3,8 @@ import ButtonBase from '@mui/material/ButtonBase'
 import Dialog from '@mui/material/Dialog'
 import Typography from '@mui/material/Typography'
 import { motion } from 'motion/react'
+import { DISPLAY_FONT_FAMILY, STICKER_COLORS } from '@/theme/theme'
+import { stickerButtonSx, stickerPanelSx } from '@/theme/sticker'
 import { PIECE_IMAGES, PIECE_NAMES } from '@/utils/pieces'
 import type { PromotionPiece } from '@/types/chess.types'
 import type { PromotionDialogProps } from './PromotionDialog.types'
@@ -19,15 +21,22 @@ const PromotionDialog = ({ promotion, onSelect, onCancel }: PromotionDialogProps
           sx: {
             px: 3,
             py: 2.5,
-            borderRadius: 4,
-            backgroundColor: 'rgba(20, 25, 38, 0.92)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(16px)',
+            ...stickerPanelSx,
           },
         },
       }}
     >
-      <Typography variant="h6" sx={{ textAlign: 'center', fontWeight: 800, mb: 2 }}>
+      <Typography
+        variant="h6"
+        sx={{
+          textAlign: 'center',
+          fontFamily: DISPLAY_FONT_FAMILY,
+          fontWeight: 400,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          mb: 2,
+        }}
+      >
         Promote to
       </Typography>
       <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -43,15 +52,9 @@ const PromotionDialog = ({ promotion, onSelect, onCancel }: PromotionDialogProps
                 onClick={() => onSelect(piece)}
                 aria-label={`Promote to ${PIECE_NAMES[piece]}`}
                 sx={{
+                  ...stickerButtonSx(STICKER_COLORS.paper),
                   width: { xs: 64, sm: 84 },
                   height: { xs: 64, sm: 84 },
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  transition: 'background-color 0.15s, transform 0.15s',
-                  '&:hover': {
-                    backgroundColor: 'rgba(245, 185, 66, 0.18)',
-                    transform: 'translateY(-4px)',
-                  },
                 }}
               >
                 <img
