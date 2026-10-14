@@ -11,6 +11,15 @@ export const BOARD_COLORS = {
   check: 'rgba(232, 55, 55, 0.85)',
 } as const
 
+/** Die-cut paper and hard-shadow ink of the main menu's sticker style. */
+export const STICKER_COLORS = {
+  paper: '#f4efe6',
+  ink: '#000',
+} as const
+
+/** Condensed poster face for display titles; the fallbacks keep a similar width while Anton loads. */
+export const DISPLAY_FONT_FAMILY = '"Anton", "Impact", "Arial Narrow", sans-serif'
+
 const theme = createTheme({
   palette: {
     mode: 'dark',
