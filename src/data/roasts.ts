@@ -1,3 +1,4 @@
+import { bestCurrentRating } from '@/services/dossier'
 import type { PlayerDossier } from '@/types/dossier.types'
 
 /**
@@ -9,11 +10,6 @@ interface RoastRule {
   id: string
   applies: (dossier: PlayerDossier) => boolean
   line: (dossier: PlayerDossier) => string
-}
-
-const bestCurrentRating = (dossier: PlayerDossier): number | null => {
-  const ratings = Object.values(dossier.career.ratings).map((block) => block.current)
-  return ratings.length > 0 ? Math.max(...ratings) : null
 }
 
 const lossShare = (dossier: PlayerDossier, ending: 'timeout' | 'resignation'): number =>

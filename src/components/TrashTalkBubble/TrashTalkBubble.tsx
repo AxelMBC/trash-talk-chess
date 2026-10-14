@@ -1,13 +1,10 @@
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { speechBubbleSx } from '@/theme/sticker'
 import type { TrashTalkBubbleProps } from './TrashTalkBubble.types'
 
 /** Fixed slot height so lines appearing and leaving never shift the board. */
 const SLOT_HEIGHT_PX = 56
-
-const BUBBLE_BG = 'rgba(38, 30, 16, 0.96)'
-const BUBBLE_BORDER = '1px solid rgba(245, 185, 66, 0.35)'
 
 /**
  * The engine's speech bubble. Purely presentational: renders whatever line it
@@ -49,40 +46,9 @@ const TrashTalkBubble = ({ line }: TrashTalkBubbleProps) => {
           >
             <Box
               data-testid="trash-talk-line"
-              sx={{
-                position: 'relative',
-                maxWidth: '94%',
-                px: 1.75,
-                py: 0.75,
-                borderRadius: 2.5,
-                backgroundColor: BUBBLE_BG,
-                border: BUBBLE_BORDER,
-                // Tail pointing up at the opponent's side of the table.
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: -6,
-                  left: 26,
-                  width: 10,
-                  height: 10,
-                  transform: 'rotate(45deg)',
-                  backgroundColor: BUBBLE_BG,
-                  borderTop: BUBBLE_BORDER,
-                  borderLeft: BUBBLE_BORDER,
-                },
-              }}
+              sx={[speechBubbleSx('up'), { maxWidth: '94%', py: 0.75, fontWeight: 700, fontSize: '0.9rem', textAlign: 'center' }]}
             >
-              <Typography
-                sx={{
-                  fontSize: '0.9rem',
-                  fontStyle: 'italic',
-                  textAlign: 'center',
-                  lineHeight: 1.35,
-                  color: 'rgba(255, 236, 205, 0.95)',
-                }}
-              >
-                🤖 “{line.text}”
-              </Typography>
+              “{line.text}”
             </Box>
           </motion.div>
         )}

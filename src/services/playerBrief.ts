@@ -1,4 +1,4 @@
-import { loadCachedDossier } from '@/services/dossier'
+import { bestCurrentRating, loadCachedDossier } from '@/services/dossier'
 import type { PlayerDossier } from '@/types/dossier.types'
 import type { PlayerProfile, PlayerProfileFacts } from '@/types/trashTalk.types'
 
@@ -17,11 +17,6 @@ export const rememberScoutedPlayer = (username: string) => {
   } catch {
     // No storage just means no personalization.
   }
-}
-
-const bestCurrentRating = (dossier: PlayerDossier): number | null => {
-  const ratings = Object.values(dossier.career.ratings).map((block) => block.current)
-  return ratings.length > 0 ? Math.max(...ratings) : null
 }
 
 export const dossierToBrief = (d: PlayerDossier): string => {

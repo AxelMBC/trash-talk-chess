@@ -5,9 +5,11 @@ import { buildDossier, loadCachedDossier, saveDossier } from '@/services/dossier
 import { rememberScoutedPlayer } from '@/services/playerBrief'
 import type { PlayerDossier } from '@/types/dossier.types'
 
+export type ScoutingStage = 'profile' | 'ratings' | 'games'
+
 export type ScoutingState =
   | { phase: 'idle' }
-  | { phase: 'loading'; username: string; progress: CollectProgress | null }
+  | { phase: 'loading'; username: string; stage: ScoutingStage; progress: CollectProgress | null }
   | { phase: 'ready'; dossier: PlayerDossier; fromCache: boolean }
   | { phase: 'error'; username: string; error: ScoutError }
 
@@ -50,7 +52,11 @@ const useScoutingReport = (): ScoutingReport => {
     const controller = new AbortController()
     const { signal } = controller
     activeScoutRef.current = controller
-    setState({ phase: 'loading', username, progress: null })
+    setState({ phase: 'loading', username, stage: 'profile', progress: null })
+
+    const advanceTo = (stage: ScoutingStage) => {
+      setState((prev) => (prev.phase === 'loading' ? { ...prev, stage } : prev))
+    }
 
     try {
       const profile = await fetchProfile(username, signal)
@@ -60,6 +66,7 @@ const useScoutingReport = (): ScoutingReport => {
         return
       }
 
+      advanceTo('ratings')
       const stats = await fetchStats(username, signal)
       if (signal.aborted) return
       if (!stats.ok) {
@@ -67,6 +74,7 @@ const useScoutingReport = (): ScoutingReport => {
         return
       }
 
+      advanceTo('games')
       const games = await collectRecentGames(
         username,
         100,

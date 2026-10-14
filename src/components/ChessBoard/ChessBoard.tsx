@@ -12,6 +12,8 @@ import {
   squareToRow,
 } from '@/utils/board'
 import { PIECE_NAMES } from '@/utils/pieces'
+import { STICKER_COLORS } from '@/theme/theme'
+import { STICKER_RADIUS } from '@/theme/sticker'
 import type { ChessBoardProps } from './ChessBoard.types'
 
 const ChessBoard = ({
@@ -41,7 +43,8 @@ const ChessBoard = ({
         position: 'relative',
         width: '100%',
         aspectRatio: '1 / 1',
-        borderRadius: 2,
+        border: `3px solid ${STICKER_COLORS.ink}`,
+        borderRadius: STICKER_RADIUS,
         overflow: 'hidden',
         pointerEvents: disabled ? 'none' : 'auto',
       }}

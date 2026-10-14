@@ -219,6 +219,11 @@ export const buildDossier = (
   recent: buildRecentAnalysis(games, profile.username ?? username),
 })
 
+export const bestCurrentRating = (dossier: PlayerDossier): number | null => {
+  const ratings = Object.values(dossier.career.ratings).map((block) => block.current)
+  return ratings.length > 0 ? Math.max(...ratings) : null
+}
+
 const cacheKey = (username: string) => `ttc:dossier:${username.toLowerCase()}`
 
 export const loadCachedDossier = (username: string): PlayerDossier | null => {

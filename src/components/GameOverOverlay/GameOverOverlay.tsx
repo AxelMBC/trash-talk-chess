@@ -4,12 +4,16 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import confetti from 'canvas-confetti'
 import { motion, useReducedMotion } from 'motion/react'
+import { STICKER_COLORS, STICKER_PALETTE } from '@/theme/theme'
+import { hardShadow, labelStickerSx, posterTextSx, stickerButtonSx } from '@/theme/sticker'
 import { PIECE_IMAGES } from '@/utils/pieces'
 import { colorName } from '@/utils/board'
 import type { GameOverOverlayProps } from './GameOverOverlay.types'
 
-const WHITE_CONFETTI = ['#f4f6fa', '#f5b942', '#ffe8b3', '#c9d4e8']
-const BLACK_CONFETTI = ['#4dd6c1', '#f5b942', '#8ab4ff', '#39404f']
+const { ink: _ink, ...confettiPalette } = STICKER_PALETTE
+const CONFETTI_COLORS: string[] = Object.values(confettiPalette)
+
+const overlayButtonSx = { px: 4, py: 1, fontSize: '1.05rem' }
 
 const fireCelebration = (colors: string[]): (() => void) => {
   const burst = (particleRatio: number, options: confetti.Options) => {
@@ -51,13 +55,13 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
     if (!isCheckmate || reduceMotion) return
     let stopCelebration: (() => void) | undefined
     const timer = setTimeout(() => {
-      stopCelebration = fireCelebration(winner === 'w' ? WHITE_CONFETTI : BLACK_CONFETTI)
+      stopCelebration = fireCelebration(CONFETTI_COLORS)
     }, 350)
     return () => {
       clearTimeout(timer)
       stopCelebration?.()
     }
-  }, [isCheckmate, winner, reduceMotion])
+  }, [isCheckmate, reduceMotion])
 
   return (
     <motion.div
@@ -89,12 +93,12 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
               alt={`${colorName(winner)} King`}
               style={{
                 width: 'clamp(88px, 18vw, 140px)',
-                filter: 'drop-shadow(0 0 32px rgba(245, 185, 66, 0.55))',
+                filter: `drop-shadow(${hardShadow(6)})`,
               }}
             />
           </motion.div>
         )}
-        <Box component="span" sx={{ display: 'flex', overflow: 'hidden', py: 0.5 }}>
+        <Box component="span" sx={{ display: 'flex', overflow: 'hidden', pt: 0.5, pb: 1.5, pr: 1 }}>
           {title.split('').map((letter, index) => (
             <motion.span
               // Letters repeat and the title never reorders, so position is the identity.
@@ -107,16 +111,11 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
               <Typography
                 component="span"
                 sx={{
-                  fontSize: 'clamp(2.4rem, 9vw, 4.8rem)',
-                  fontWeight: 800,
+                  display: 'block',
+                  fontSize: 'clamp(2.6rem, 10vw, 5.4rem)',
                   letterSpacing: '0.04em',
                   lineHeight: 1,
-                  background: isCheckmate
-                    ? 'linear-gradient(180deg, #ffe8b3 0%, #f5b942 55%, #c98a1b 100%)'
-                    : 'linear-gradient(180deg, #eef1f6 0%, #9aa3b5 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  ...posterTextSx,
                 }}
               >
                 {letter}
@@ -129,7 +128,17 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.85 }}
         >
-          <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          <Typography
+            sx={{
+              fontSize: 'clamp(1.1rem, 4vw, 1.5rem)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              ...labelStickerSx('primary.main', 4),
+              px: 2,
+              py: 0.25,
+              transform: 'rotate(-2deg)',
+            }}
+          >
             {subtitle}
           </Typography>
         </motion.div>
@@ -139,10 +148,18 @@ const GameOverOverlay = ({ status, winner, onRematch, onMenu }: GameOverOverlayP
           transition={{ delay: 1.05 }}
         >
           <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5 }}>
-            <Button variant="contained" size="large" onClick={onRematch} sx={{ px: 4 }}>
+            <Button
+              variant="contained"
+              onClick={onRematch}
+              sx={{ ...stickerButtonSx('primary.main'), ...overlayButtonSx }}
+            >
               Rematch
             </Button>
-            <Button variant="outlined" color="inherit" size="large" onClick={onMenu} sx={{ px: 4 }}>
+            <Button
+              variant="contained"
+              onClick={onMenu}
+              sx={{ ...stickerButtonSx(STICKER_COLORS.paper), ...overlayButtonSx }}
+            >
               Main Menu
             </Button>
           </Box>

@@ -10,6 +10,8 @@ import type { Difficulty, PromotionPiece } from '@/types/chess.types'
  */
 const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish-18-lite-single.js`
 
+export const ENGINE_NAME = 'Stockfish'
+
 const HANDSHAKE_TIMEOUT_MS = 15_000
 /** Grace on top of a preset's movetime before a search is declared dead. */
 const SEARCH_TIMEOUT_GRACE_MS = 10_000
