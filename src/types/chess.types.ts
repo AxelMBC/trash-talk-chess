@@ -33,6 +33,14 @@ export interface PendingPromotion {
   color: Color
 }
 
+export interface GameView {
+  ply: number
+  isLive: boolean
+  pieces: TrackedPiece[]
+  lastMove: LastMove | null
+  checkSquare: Square | null
+}
+
 /** Pieces captured BY each color (i.e. `w` holds black pieces White has taken). */
 export interface CapturedByColor {
   w: PieceSymbol[]

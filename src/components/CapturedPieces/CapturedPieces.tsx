@@ -2,8 +2,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { PieceSymbol } from 'chess.js'
-import { STICKER_COLORS } from '@/theme/theme'
-import { STICKER_RADIUS, hardShadow } from '@/theme/sticker'
+import { stickerPlateSx } from '@/theme/sticker'
+import { opposite } from '@/utils/board'
 import { PIECE_IMAGES, PIECE_NAMES, PIECE_VALUES } from '@/utils/pieces'
 import type { CapturedPiecesProps, PlayerActivity } from './CapturedPieces.types'
 
@@ -27,7 +27,7 @@ const withStableKeys = (pieces: PieceSymbol[]): { piece: PieceSymbol; key: strin
 
 const CapturedPieces = ({ color, captured, name, activity = null }: CapturedPiecesProps) => {
   const reduceMotion = useReducedMotion()
-  const enemyColor = color === 'w' ? 'b' : 'w'
+  const enemyColor = opposite(color)
   const taken = withStableKeys(
     [...captured[color]].sort((a, b) => PIECE_VALUES[b] - PIECE_VALUES[a]),
   )
@@ -42,10 +42,7 @@ const CapturedPieces = ({ color, captured, name, activity = null }: CapturedPiec
         minHeight: 36,
         px: 1.25,
         py: 0.25,
-        bgcolor: 'background.paper',
-        border: `2.5px solid ${STICKER_COLORS.ink}`,
-        borderRadius: STICKER_RADIUS,
-        boxShadow: hardShadow(3),
+        ...stickerPlateSx,
       }}
     >
       <Typography

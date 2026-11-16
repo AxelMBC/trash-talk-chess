@@ -22,6 +22,7 @@ import { isGameOver } from '@/utils/board'
 const LINE_TTL_MS = 10_000
 /** Player think time on one turn before the engine starts nagging. */
 const SLOW_PLAY_THRESHOLD_MS = 30_000
+const INITIAL_BASELINE_CP = 0
 
 export interface TrashTalkConfig {
   /** When false the hook is inert (pass-and-play games). */
@@ -54,8 +55,10 @@ const useTrashTalk = (
   const { enabled, difficulty, playerColor, engineStatus, lastReport } = config
   const [line, setLine] = useState<TrashTalkLine | null>(null)
 
-  /** Engine-perspective cp of the previous search; 0 ≈ the starting position. */
-  const prevScoreRef = useRef(0)
+  /** Engine-perspective cp of the previous search. */
+  const prevScoreRef = useRef(INITIAL_BASELINE_CP)
+  const baselinesRef = useRef<{ moveCount: number; cp: number }[]>([])
+  const seenMovesRef = useRef({ gameId: game.gameId, count: game.moves.length })
   /** Set when a quiet player move is waiting on the engine's score to be judged. */
   const awaitingQualityRef = useRef(false)
   const seenReportRef = useRef<SearchReport | null>(null)
@@ -107,7 +110,8 @@ const useTrashTalk = (
 
   // Rematch (and first mount): wipe all commentary and session state.
   useEffect(() => {
-    prevScoreRef.current = 0
+    prevScoreRef.current = INITIAL_BASELINE_CP
+    baselinesRef.current = []
     awaitingQualityRef.current = false
     seenReportRef.current = null
     playerBlundersRef.current = 0
@@ -119,6 +123,24 @@ const useTrashTalk = (
     if (enabled) profileRef.current = getPlayerProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.gameId, enabled])
+
+  useEffect(() => {
+    const seen = seenMovesRef.current
+    seenMovesRef.current = { gameId: game.gameId, count: game.moves.length }
+    const tookBack = seen.gameId === game.gameId && game.moves.length < seen.count
+    if (!enabled || !tookBack) return
+
+    const baselines = baselinesRef.current
+    while (baselines.length > 0 && baselines[baselines.length - 1].moveCount > game.moves.length) {
+      baselines.pop()
+    }
+    prevScoreRef.current = baselines.at(-1)?.cp ?? INITIAL_BASELINE_CP
+    awaitingQualityRef.current = false
+    requestSeqRef.current++
+    if (ttlTimerRef.current) clearTimeout(ttlTimerRef.current)
+    setLine(null)
+    turnStartedAtRef.current = Date.now()
+  }, [enabled, game.gameId, game.moves.length])
 
   // Stopwatch for the player's think time on each of their turns.
   useEffect(() => {
@@ -160,6 +182,7 @@ const useTrashTalk = (
     const cp = scoreToCp(lastReport.score)
     const delta = cp - prevScoreRef.current
     prevScoreRef.current = cp
+    baselinesRef.current.push({ moveCount: game.moves.length, cp })
     if (isGameOver(game.status) || game.turn !== playerColor) return
 
     const quality = classifyPlayerMove(delta)
@@ -188,7 +211,7 @@ const useTrashTalk = (
     const timer = setTimeout(() => show('slowPlay'), SLOW_PLAY_THRESHOLD_MS)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, playerColor, game.turn, game.status, engineStatus, game.gameId])
+  }, [enabled, playerColor, game.turn, game.status, engineStatus, game.gameId, game.moves.length])
 
   // Unmount: nothing may fire into a dead screen.
   useEffect(

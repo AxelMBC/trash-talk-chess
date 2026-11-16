@@ -64,6 +64,21 @@ export const stickerPanelSx = {
   boxShadow: hardShadow(8),
 }
 
+export const stickerPlateSx = {
+  bgcolor: 'background.paper',
+  border: `2.5px solid ${STICKER_COLORS.ink}`,
+  borderRadius: STICKER_RADIUS,
+  boxShadow: hardShadow(3),
+}
+
+export const stickerDialogTitleSx = {
+  textAlign: 'center',
+  fontFamily: DISPLAY_FONT_FAMILY,
+  fontWeight: 400,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+} as const
+
 export const posterTextSx = {
   fontFamily: DISPLAY_FONT_FAMILY,
   fontWeight: 400,
@@ -101,6 +116,7 @@ export const stickerButtonSx = (background: string, { size = 'medium' }: { size?
     transition: 'transform 80ms, box-shadow 80ms',
     '&:hover': { bgcolor: background, transform: 'translate(-1px, -1px)', boxShadow: hardShadow(shadow + 1) },
     '&:active': { transform: `translate(${shadow}px, ${shadow}px)`, boxShadow: hardShadow(0) },
+    '&.Mui-disabled': { bgcolor: background, color: STICKER_COLORS.ink, opacity: 0.45 },
     '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
   }
 }

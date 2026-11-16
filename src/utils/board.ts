@@ -33,4 +33,6 @@ export const squareToRow = (square: Square, orientation: Color): number => {
 export const isGameOver = (status: GameStatus): boolean =>
   status === 'checkmate' || status === 'stalemate' || status === 'draw'
 
+export const opposite = (color: Color): Color => (color === 'w' ? 'b' : 'w')
+
 export const colorName = (color: Color): string => (color === 'w' ? 'White' : 'Black')

@@ -3,8 +3,8 @@ import ButtonBase from '@mui/material/ButtonBase'
 import Dialog from '@mui/material/Dialog'
 import Typography from '@mui/material/Typography'
 import { motion } from 'motion/react'
-import { DISPLAY_FONT_FAMILY, STICKER_COLORS } from '@/theme/theme'
-import { stickerButtonSx, stickerPanelSx } from '@/theme/sticker'
+import { STICKER_COLORS } from '@/theme/theme'
+import { stickerButtonSx, stickerDialogTitleSx, stickerPanelSx } from '@/theme/sticker'
 import { PIECE_IMAGES, PIECE_NAMES } from '@/utils/pieces'
 import type { PromotionPiece } from '@/types/chess.types'
 import type { PromotionDialogProps } from './PromotionDialog.types'
@@ -26,17 +26,7 @@ const PromotionDialog = ({ promotion, onSelect, onCancel }: PromotionDialogProps
         },
       }}
     >
-      <Typography
-        variant="h6"
-        sx={{
-          textAlign: 'center',
-          fontFamily: DISPLAY_FONT_FAMILY,
-          fontWeight: 400,
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          mb: 2,
-        }}
-      >
+      <Typography variant="h6" sx={{ ...stickerDialogTitleSx, mb: 2 }}>
         Promote to
       </Typography>
       <Box sx={{ display: 'flex', gap: 1.5 }}>
